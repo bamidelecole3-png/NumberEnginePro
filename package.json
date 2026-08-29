@@ -1,0 +1,16 @@
+{
+  "name": "4sil-timing-intelligence",
+  "version": "1.0.0",
+  "description": "4-Ball Timing Intelligence + 4SIL -- trade-timing rebuild on top of SNIPER_V4 PRO v6.2's ported 4-ball/4SIL mathematics (src-legacy-core, unmodified except for one renamed debug route -- see src-legacy-core/src/routes/api.js).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "for f in $(find . -name '*.js' -not -path './node_modules/*'); do node --check \"$f\" || exit 1; done && echo 'All files OK'"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
