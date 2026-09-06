@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4SIL &middot; 4-Ball Timing Intelligence</title>
+<style>
+  :root{
+    --bg:#05070d;
+    --panel:#0b1020cc;
+    --panel-border:#1c2740;
+    --cyan:#37e2ff;
+    --emerald:#2ee6a6;
+    --violet:#a877ff;
+    --amber:#ffb84d;
+    --red:#ff5c6c;
+    --silver:#9aa7c2;
+    --text:#e9edf7;
+    --dim:#7c8aad;
+    --mono: 'JetBrains Mono','SFMono-Regular',Consolas,monospace;
+    --sans: 'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(56,226,255,0.10), transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(168,119,255,0.10), transparent 60%),
+      linear-gradient(180deg,#05070d,#060810 40%,#05060c);
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  a{color:inherit;}
+
+  /* ===== RGB THEME STRIPS (ported from the older build's
+     .rgb-top-strip / .rgb-bottom-strip) -- thin animated gradient bars
+     that bookend the page, cycling through the dashboard's own accent
+     palette instead of the old build's red/blue/green/gold/purple set. ===== */
+  @keyframes rgbStripFlow{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+  }
+  .rgb-top-strip{
+    height:3px; width:100%;
+    background:linear-gradient(90deg, var(--cyan), var(--emerald), var(--violet), var(--amber), var(--red));
+    background-size:300% 300%;
+    animation: rgbStripFlow 6s ease infinite;
+  }
+  .rgb-bottom-strip{
+    height:3px; width:100%;
+    background:linear-gradient(90deg, var(--red), var(--amber), var(--emerald), var(--cyan), var(--violet));
+    background-size:300% 300%;
+    animation: rgbStripFlow 8s ease infinite;
+    position:fixed; bottom:0; left:0; z-index:1000;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .rgb-top-strip, .rgb-bottom-strip{ animation:none; }
+  }
+
+  /* ===== PRIORITY BREATHING BORDER (ported from the older build's
+     .priority-glow) -- applied to the Hero card so it reads as the
+     single most important surface on the page, per the same "special
+     rgb lighting effect on the hero card" direction that produced the
+     ENTER-state text gradient below. Cycles the card's own border +
+     glow color through the accent palette independently of whatever
+     state the operator badge is showing. ===== */
+  @keyframes priorityBreathing{
+    0%   { box-shadow:0 0 16px rgba(55,226,255,0.28), inset 0 0 12px rgba(55,226,255,0.06); border-color:rgba(55,226,255,0.45); }
+    25%  { box-shadow:0 0 20px rgba(46,230,166,0.3), inset 0 0 14px rgba(46,230,166,0.08); border-color:rgba(46,230,166,0.5); }
+    50%  { box-shadow:0 0 24px rgba(168,119,255,0.35), inset 0 0 16px rgba(168,119,255,0.1); border-color:rgba(168,119,255,0.55); }
+    75%  { box-shadow:0 0 20px rgba(255,184,77,0.3), inset 0 0 14px rgba(255,184,77,0.08); border-color:rgba(255,184,77,0.5); }
+    100% { box-shadow:0 0 16px rgba(55,226,255,0.28), inset 0 0 12px rgba(55,226,255,0.06); border-color:rgba(55,226,255,0.45); }
+  }
+  .priority-glow{ animation: priorityBreathing 4s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce){
+    .priority-glow{ animation:none; border-color:var(--panel-border); }
+  }
+
+  /* ===== INGEST INFO STRIP (ported from the older build's
+     .ingest-strip) -- compact glance-and-move-on readout that sits
+     directly above the hero card: last ingest time, total draws
+     ingested, and a dedicated API-health LED (separate from the
+     statusbar's own API dot, which reflects snapshot-fetch success
+     rather than the /api/health contract). ===== */
+  .ingest-strip{
+    display:flex; align-items:center; flex-wrap:wrap; gap:18px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:10px;
+    padding:10px 16px;
+    margin-bottom:18px;
+    font-family:var(--mono); font-size:12px;
+  }
+  .ingest-strip-item{ display:flex; align-items:center; gap:7px; color:var(--dim); }
+  .ingest-strip-item .value{ color:var(--text); font-weight:700; }
+  .ingest-strip-item .led-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:var(--emerald); box-shadow:0 0 10px var(--emerald);
+  }
+  .ingest-strip-item .led-dot.yellow{ background:var(--amber); box-shadow:0 0 10px var(--amber); }
+  .ingest-strip-item .led-dot.red{ background:var(--red); box-shadow:0 0 10px var(--red); }
+
+  /* ===== STATUS BAR ===== */
+  .statusbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; flex-wrap:wrap; align-items:center; gap:18px;
+    padding:10px 20px;
+    background:rgba(5,7,13,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--panel-border);
+    font-family:var(--mono); font-size:12px; letter-spacing:0.04em;
+  }
+  .statusbar .brand{font-family:var(--sans); font-weight:700; font-size:14px; letter-spacing:0.06em; color:var(--text); margin-right:auto;}
+  .brand small{display:block;font-family:var(--mono);font-weight:400;color:var(--dim);font-size:10px;letter-spacing:0.12em;}
+  .stat{display:flex;align-items:center;gap:6px;color:var(--dim);}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .dot.live{background:var(--emerald); box-shadow:0 0 8px var(--emerald);}
+  .dot.stale{background:var(--amber); box-shadow:0 0 8px var(--amber);}
+  .dot.offline{background:var(--red); box-shadow:0 0 8px var(--red);}
+  .pulse{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:breathe 2.2s ease-in-out infinite;}
+  .pulse.dim{background:#2a3550;box-shadow:none;animation:none;}
+  @keyframes breathe{0%,100%{opacity:.35;transform:scale(0.85);}50%{opacity:1;transform:scale(1.15);}}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 0;}
+
+  /* ===== HERO CARD ===== */
+  .hero{
+    position:relative; overflow:hidden;
+    border-radius:20px;
+    border:1px solid var(--panel-border);
+    background:linear-gradient(160deg, rgba(15,20,38,0.9), rgba(8,11,20,0.9));
+    padding:34px 30px 32px;
+    min-height:520px;
+  }
+  .hero-evidence-matrix{
+    border-left:1px solid var(--panel-border);
+    padding-left:22px;
+  }
+  .hero-evidence-label{
+    font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim);
+    text-transform:uppercase;margin-bottom:12px;font-weight:600;
+  }
+  .hero::before{
+    content:"";position:absolute; inset:-40%;
+    background:conic-gradient(from 0deg, rgba(56,226,255,0.10), rgba(168,119,255,0.10), rgba(46,230,166,0.08), rgba(56,226,255,0.10));
+    animation: rotate 22s linear infinite;
+    opacity:.6;
+  }
+  @keyframes rotate{to{transform:rotate(360deg);}}
+  .hero-inner{position:relative; z-index:2;}
+  .hero-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .hero-title{font-size:13px;letter-spacing:0.16em;color:var(--text);font-family:var(--mono);text-transform:uppercase;font-weight:800;}
+  .hero-live{font-family:var(--mono);font-size:11px;color:var(--cyan);display:flex;align-items:center;gap:6px;}
+
+  .state-badge{font-family:var(--sans);font-weight:900;font-size:clamp(31px,5.25vw,54px);letter-spacing:.02em;margin:0;line-height:.95;}
+  /* ENTER state: full RGB cycling treatment, ported from the older
+     build's rgbEnterNowHue badge animation. That build used a scrolling
+     hue gradient as a solid badge background; this card's ENTER state is
+     large plain text with no background chip, so the same gradient is
+     applied via background-clip:text instead so the text itself cycles
+     through the spectrum rather than sitting in a colored pill. */
+  .state-badge[data-tone="enter"]{
+    color: transparent;
+    background: linear-gradient(90deg, #ff3b3b, #ffbe3b, #4dff4d, #3bd4ff, #6a5cff, #ff3bd4, #ff3b3b);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: rgbEnterNowHue 3s linear infinite;
+    filter: drop-shadow(0 0 22px rgba(255,255,255,0.35));
+  }
+  @keyframes rgbEnterNowHue{0%{background-position:0% 50%;}100%{background-position:300% 50%;}}
+  @media (prefers-reduced-motion: reduce){
+    .state-badge[data-tone="enter"]{animation:none; background-position:0% 50%;}
+  }
+  .state-badge[data-tone="watch"], .state-badge[data-tone="monitor"]{color:var(--silver);}
+  .state-badge[data-tone="prepare"]{color:var(--amber);text-shadow:0 0 22px rgba(255,184,77,.3);}
+  .state-badge[data-tone="pause"]{color:var(--cyan);text-shadow:0 0 22px rgba(55,226,255,.3);}
+  .state-badge[data-tone="approach"]{color:var(--amber); text-shadow:0 0 22px rgba(255,184,77,0.3);}
+  .state-badge[data-tone="hold"]{color:var(--cyan); text-shadow:0 0 22px rgba(55,226,255,0.3);}
+  .state-badge[data-tone="tp"]{color:var(--emerald); text-shadow:0 0 30px rgba(46,230,166,0.5);}
+  .state-badge[data-tone="closed"]{color:var(--dim);}
+  .state-badge[data-tone="window"]{color:var(--dim);}
+  @keyframes warnpulse{0%,100%{opacity:1;}50%{opacity:.7;}}
+
+  .subline{font-family:var(--mono);color:var(--dim);font-size:12px;margin-top:8px;line-height:1.5;}
+  .operator-strip{display:grid;grid-template-columns:1fr;gap:18px;align-items:stretch;margin:6px 0 22px;}
+  .operator-command{border:1px solid var(--panel-border);background:rgba(5,8,17,.42);border-radius:14px;padding:16px 18px;}
+  .operator-kicker{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin-bottom:7px;}
+  .operator-command .state-badge{font-size:clamp(30px,4.5vw,51px);}
+  .operator-reason{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:9px;line-height:1.5;}
+
+  /* Trade Penetration badge -- now lives inside #neiPanel (the 4SIL Next
+     Event panel) directly under the hero card, instead of the hero grid. */
+  .penetration-card{border:1px solid var(--panel-border);background:rgba(5,8,17,.42);border-radius:14px;padding:16px 18px;margin:2px 0 20px;}
+
+  .penetration-value{font-family:var(--sans);font-size:25px;font-weight:850;margin-top:5px;color:var(--text);}
+  .penetration-meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:9px;font-family:var(--mono);font-size:10.5px;color:var(--dim);}
+  .penetration-meta b{color:var(--text);}
+
+  /* Two-column hero grid: left = confidence ring + all metric rows,
+     right = 4SIL Evidence Matrix (moved up from below the legacy badge,
+     now using the space freed by removing the Trade Penetration /
+     Timing Bond block). */
+  .hero-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:26px;align-items:start;}
+  @media(max-width:760px){.hero-grid{grid-template-columns:1fr;}}
+
+  .hero-left{display:flex;flex-direction:column;gap:20px;}
+
+  .confidence-ring{align-self:center;display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .ring{position:relative;width:132px;height:132px;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring-value{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+  .ring-value b{font-size:26px;font-family:var(--sans);}
+  .ring-value span{font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;}
+
+  .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 26px;}
+  @media(max-width:760px){.metrics{grid-template-columns:1fr;}}
+  .metric-row{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);font-size:12.5px;color:var(--dim);gap:14px;}
+  .metric-row b{color:var(--text);font-family:var(--sans);}
+  .bar{flex:1;height:6px;border-radius:6px;background:#141b30;overflow:hidden;margin:0 10px;}
+  .bar > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--emerald));}
+
+  .footer-tag{margin-top:16px;font-family:var(--mono);font-size:11px;color:var(--dim);letter-spacing:.06em;}
+  .operator-status{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.08em;}
+  .window-pill{display:inline-block;padding:4px 8px;border-radius:7px;background:rgba(55,226,255,.07);border:1px solid rgba(55,226,255,.14);color:var(--cyan);font-family:var(--mono);font-size:10.5px;}
+
+  /* ===== LEGACY 4SIL BADGE + DUAL PICK (supporting evidence --
+     repositioned directly under the operator command so it reads
+     immediately, and enlarged for legibility) ===== */
+  .legacy-badge{
+    margin:18px 0 20px; padding:18px 20px;
+    background:rgba(154,167,194,0.06);
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    font-family:var(--mono);
+  }
+  .legacy-badge-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .legacy-badge-label{font-size:11px;letter-spacing:.14em;color:var(--dim);}
+  .legacy-badge-op{font-size:13px;letter-spacing:.06em;color:var(--silver);font-weight:700;}
+  .legacy-badge-dual{display:flex;align-items:center;gap:22px;margin-top:14px;}
+  .dual-pick{display:flex;align-items:center;gap:10px;}
+  .dual-swatch{width:16px;height:16px;border-radius:50%;display:inline-block;background:var(--dim);box-shadow:0 0 10px currentColor;}
+  .dual-swatch.RED{background:var(--red);}
+  .dual-swatch.BLUE{background:var(--cyan);}
+  .dual-swatch.GREEN{background:var(--emerald);}
+  .dual-color{font-size:21px;color:var(--text);letter-spacing:.04em;font-weight:800;}
+  .dual-conf{font-size:14px;color:var(--dim);font-weight:600;}
+  .dual-sep{color:var(--dim);font-size:22px;}
+  .legacy-badge-summary{margin-top:10px;font-size:12px;color:var(--dim);line-height:1.5;}
+  .footer-tag b{color:var(--amber);}
+
+  /* ===== TRADE WINDOW VISUALIZER ===== */
+  .panel{
+    border-radius:16px;border:1px solid var(--panel-border);
+    background:var(--panel); padding:20px 22px; margin-top:20px;
+  }
+  .panel h2{
+    font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--dim);
+    text-transform:uppercase;margin:0 0 16px;font-weight:600;
+  }
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:820px){.two-col{grid-template-columns:1fr;}}
+
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;}
+  th{text-align:left;color:var(--dim);font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--panel-border);}
+  td{padding:7px 8px;border-bottom:1px solid #121a2e;color:var(--text);}
+  tr:last-child td{border-bottom:none;}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10.5px;font-family:var(--mono);letter-spacing:.05em;}
+  .badge.HIT,.badge.Correct{background:rgba(46,230,166,0.12);color:var(--emerald);}
+  .badge.MISS{background:rgba(255,92,108,0.12);color:var(--red);}
+  .badge.Pending{background:rgba(255,184,77,0.12);color:var(--amber);}
+
+  .gate-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #121a2e;font-family:var(--mono);font-size:12.5px;}
+  .gate-row:last-child{border-bottom:none;}
+  .gate-status{width:16px;text-align:center;}
+  .gate-status.on{color:var(--emerald);}
+  .gate-status.off{color:#2a3550;}
+  .gate-detail{color:var(--dim);font-size:11px;max-width:560px;text-align:right;}
+
+  /* ===== PAPER TRADER SETTINGS (stake / capital / ladder editor) ===== */
+  .pt-settings-toggle{
+    background:none;border:1px solid var(--panel-border);color:var(--dim);
+    font-family:var(--mono);font-size:11px;letter-spacing:.05em;
+    padding:4px 10px;border-radius:6px;cursor:pointer;float:right;margin-top:-4px;
+  }
+  .pt-settings-toggle:hover{color:var(--text);border-color:var(--cyan);}
+  .pt-settings{
+    margin-top:16px;padding:16px;border:1px dashed var(--panel-border);border-radius:10px;
+    background:#0a0f1eaa;
+  }
+  .pt-settings.hidden{display:none;}
+  .pt-settings label{
+    display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    color:var(--dim);text-transform:uppercase;margin-bottom:4px;
+  }
+  .pt-settings input[type=number]{
+    width:100%;background:#0b1020;border:1px solid var(--panel-border);color:var(--text);
+    font-family:var(--mono);font-size:12.5px;border-radius:6px;padding:6px 8px;
+  }
+  .pt-settings input[type=number]:focus{outline:none;border-color:var(--cyan);}
+  .pt-ladder-grid{
+    display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:6px;margin-bottom:16px;
+  }
+  @media(max-width:820px){.pt-ladder-grid{grid-template-columns:repeat(3,1fr);}}
+
+  .pt-field{margin-bottom:14px;max-width:260px;}
+  .pt-settings-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .pt-btn{
+    background:linear-gradient(90deg,var(--cyan),var(--emerald));border:none;color:#04121a;
+    font-family:var(--sans);font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:8px;cursor:pointer;
+  }
+  .pt-btn:hover{filter:brightness(1.08);}
+  .pt-btn:disabled{opacity:.5;cursor:not-allowed;filter:none;}
+  .pt-btn-secondary{
+    background:none;border:1px solid var(--panel-border);color:var(--dim);
+    font-family:var(--sans);font-size:12.5px;padding:8px 14px;border-radius:8px;cursor:pointer;
+  }
+  .pt-btn-secondary:hover{color:var(--text);border-color:var(--cyan);}
+  .pt-settings-msg{font-family:var(--mono);font-size:11px;letter-spacing:.03em;}
+  .pt-settings-msg.ok{color:var(--emerald);}
+  .pt-settings-msg.err{color:var(--red);}
+  .pt-settings-note{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:10px;line-height:1.5;}
+
+  .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--panel-border);border-radius:10px;overflow:hidden;}
+  @media(max-width:760px){.kpi-grid{grid-template-columns:repeat(2,1fr);}}
+  .kpi{background:#0b1020;padding:14px 10px;text-align:center;}
+  .kpi b{display:block;font-size:22px;font-family:var(--sans);color:var(--text);}
+  .kpi span{font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase;}
+
+  .empty{color:var(--dim);font-family:var(--mono);font-size:12px;padding:14px 0;}
+  .scroll-x{overflow-x:auto;}
+
+  /* ===== GAUGE ENGINE CARD CONVENTION (ported from the sibling 3-Ball
+     Color Hit / Tie market-intelligence cards) -- ported wholesale for
+     #neiPanel so the 4SIL Next Event engine reads with the same
+     glanceable "topbar + twin gauges + evidence grid" structure as its
+     sibling engines. Purely presentational: every value below is bound
+     to the exact same element IDs renderNEI() already fills in, plus a
+     handful of small derived-label spans (bucketed from the same
+     timingState/confidence numbers already on screen) filled in by the
+     same function -- no new data sources. ===== */
+  .gauge-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+  .gauge-head-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .gauge-head-title h2{margin:0;font-size:13px;}
+  .gauge-tag{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--dim);border:1px solid var(--panel-border);border-radius:6px;padding:2px 8px;text-transform:uppercase;}
+
+  .gauge-topbar{border:1px solid var(--panel-border);background:rgba(5,8,17,.42);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
+  .gauge-topbar-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;}
+  .gauge-topbar-label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;}
+  .gauge-topbar-row .state-badge{font-size:clamp(20px,3vw,30px);margin:0;}
+  .gauge-topbar-meta{font-family:var(--mono);font-size:11.5px;color:var(--dim);}
+  .gauge-topbar-meta b{color:var(--text);font-family:var(--sans);}
+  .gauge-topbar-sub{font-family:var(--mono);font-size:12px;color:var(--dim);margin-top:8px;line-height:1.5;}
+
+  .gauge-score-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media(max-width:760px){.gauge-score-grid{grid-template-columns:1fr;}}
+  .gauge-score-card{border:1px solid var(--panel-border);background:rgba(5,8,17,.42);border-radius:14px;padding:16px 18px;}
+  .gauge-score-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;display:flex;justify-content:space-between;}
+  .gauge-score-value{font-family:var(--sans);font-weight:900;font-size:34px;margin-top:4px;color:var(--text);}
+  .gauge-score-value small{font-family:var(--sans);font-weight:700;font-size:15px;color:var(--dim);}
+  .gauge-score-bar{height:6px;border-radius:6px;background:#141b30;overflow:hidden;margin-top:10px;}
+  .gauge-score-bar > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#ff5c6c,#ffb84d,#2ee6a6);}
+  .gauge-score-foot{display:flex;justify-content:space-between;gap:14px;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;}
+  .gauge-score-foot b{display:block;font-family:var(--sans);font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;margin-top:2px;}
+  .gauge-score-foot b.tone-high{color:var(--red);}
+  .gauge-score-foot b.tone-moderate{color:var(--amber);}
+  .gauge-score-foot b.tone-low{color:var(--emerald);}
+
+  .gauge-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px;}
+  @media(max-width:900px){.gauge-grid3{grid-template-columns:1fr;}}
+  .gauge-card{border:1px solid var(--panel-border);background:rgba(5,8,17,.42);border-radius:14px;padding:16px 18px;}
+  .gauge-card-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+  .gauge-card .metric-row{padding:4px 0;}
+
+  .gauge-section-label{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin:18px 0 10px;display:flex;align-items:center;gap:7px;}
+</style>
+</head>
+<body>
+
+<div class="rgb-top-strip"></div>
+
+<div class="statusbar">
+  <div class="brand">4SIL &middot; 4-BALL TIMING INTELLIGENCE<small>SEASON TRADER &middot; AURORA</small></div>
+  <div class="stat"><span class="dot live" id="dataDot"></span><span id="dataLabel">DATA</span></div>
+  <div class="stat"><span class="dot live" id="apiDot"></span><span>API</span></div>
+  <div class="stat"><span class="pulse" id="pulseDot"></span></div>
+  <div class="stat">DRAW <b id="drawId" style="color:var(--text)">--</b></div>
+  <div class="stat" id="lastReceived">--:--:--</div>
+</div>
+
+<div class="wrap">
+
+  <!-- INGEST INFO STRIP -->
+  <div class="ingest-strip">
+    <div class="ingest-strip-item">
+      <span>Last Ingest</span>
+      <span id="ingestLastTime" class="value">--</span>
+    </div>
+    <div class="ingest-strip-item">
+      <span>Total Draws Ingested</span>
+      <span id="ingestTotalDraws" class="value">--</span>
+    </div>
+    <div class="ingest-strip-item">
+      <span>API Health</span>
+      <span id="ingestApiHealthLed" class="led-dot"></span>
+      <span id="ingestApiHealthText" class="value">--</span>
+    </div>
+  </div>
+
+  <div class="hero priority-glow">
+    <div class="hero-inner">
+      <div class="hero-head">
+        <div class="hero-title">4SIL OPERATOR</div>
+        <div class="hero-live"><span class="pulse" style="width:7px;height:7px;"></span> LIVE 4SIL AUTHORITY</div>
+      </div>
+
+      <div class="operator-strip">
+        <div class="operator-command">
+          <div class="operator-kicker">Current operator command</div>
+          <div class="state-badge" id="stateBadge" data-tone="monitor">MONITOR</div>
+          <div class="operator-reason" id="reasoningLine">Awaiting first snapshot…</div>
+        </div>
+      </div>
+
+      <!-- Legacy 4SIL Badge + Dual Pick -- repositioned here, directly
+           under the operator command, so it's immediately visible at
+           the top of the hero card instead of buried at the bottom. -->
+      <div class="legacy-badge" id="legacyBadge">
+        <div class="legacy-badge-head">
+          <span class="legacy-badge-label">4SIL SUPPORTING INTELLIGENCE</span>
+          <span class="legacy-badge-op" id="legacyOperatorAction">—</span>
+        </div>
+        <div class="legacy-badge-dual">
+          <div class="dual-pick" id="dualPick1">
+            <span class="dual-swatch" id="dualSwatch1"></span>
+            <span class="dual-color" id="dualColor1">—</span>
+            <span class="dual-conf" id="dualConf1"></span>
+          </div>
+          <span class="dual-sep">/</span>
+          <div class="dual-pick" id="dualPick2">
+            <span class="dual-swatch" id="dualSwatch2"></span>
+            <span class="dual-color" id="dualColor2">—</span>
+            <span class="dual-conf" id="dualConf2"></span>
+          </div>
+        </div>
+        <div class="legacy-badge-summary" id="legacyBadgeSummary"></div>
+      </div>
+
+      <!-- Timing Bond / TP1 Window / ENTER Window (Trade Penetration) block
+           has been removed entirely. The confidence ring now sits on the
+           left with the rest of the metrics, and the freed right-hand
+           space is used by the 4SIL EVIDENCE MATRIX (moved up from below
+           the legacy badge into the hero card itself). -->
+      <div class="hero-grid">
+        <div class="hero-left">
+          <div class="confidence-ring">
+            <div class="ring">
+              <svg width="132" height="132">
+                <circle cx="66" cy="66" r="56" stroke="#141b30" stroke-width="10" fill="none"/>
+                <circle id="ringProgress" cx="66" cy="66" r="56" stroke="url(#grad)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="352" stroke-dashoffset="352"/>
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#37e2ff"/>
+                    <stop offset="100%" stop-color="#2ee6a6"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="ring-value"><b id="confidenceValue">0%</b><span>4SIL Confidence</span></div>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric-row"><span>Season Health</span><div class="bar"><i id="healthBar" style="width:0%"></i></div><b id="healthValue">0%</b></div>
+            <div class="metric-row"><span>Timing Strength</span><div class="bar"><i id="timingBar" style="width:0%"></i></div><b id="timingValue">0%</b></div>
+            <div class="metric-row"><span>4SIL Confirmation</span><span style="flex:1"></span><b id="gateValue">0 / 0</b></div>
+            <div class="metric-row"><span>Trade Window</span><span style="flex:1"></span><b id="tradeWindowMetric">DRAW 1 — 11</b></div>
+            <div class="metric-row"><span>4SIL Operator</span><span style="flex:1"></span><b id="operatorStateValue">MONITOR</b></div>
+            <div class="metric-row"><span>Penetration</span><span style="flex:1"></span><b id="penetrationStateValue">PAUSED</b></div>
+          </div>
+        </div>
+
+        <div class="hero-evidence-matrix">
+          <div class="hero-evidence-label">4SIL EVIDENCE MATRIX</div>
+          <div id="gateMatrix"></div>
+          <div class="footer-tag" id="gateFooter" style="margin-top:14px;">—</div>
+        </div>
+      </div>
+
+      <div class="footer-tag">EXECUTION: <b id="actionValue">WAIT FOR 4SIL ENTER</b></div>
+    </div>
+  </div>
+
+  <!-- 4SIL NEXT EVENT INTELLIGENCE ENGINE (4SIL-NEI)
+       Downstream, read-only timing analyst -- "now that 4SIL is active,
+       based on how previous 4SIL calls and paper-trader executions
+       behaved, when should the next 4-ball event of ANY color occur."
+       Never feeds back into 4SIL; purely additive. Reads snapshot.nei
+       (src/foursil/nextEventIntelEngine.js via src/routes/timingApi.js).
+       Rendered by renderNEI() below. -->
+  <div class="panel" id="neiPanel">
+    <div class="gauge-head">
+      <div class="gauge-head-title">
+        <h2 style="margin:0;">🎯 4SIL Next Event Intelligence</h2>
+        <span class="gauge-tag" id="neiEngineStateBadge">DORMANT</span>
+      </div>
+    </div>
+
+    <!-- Trade Penetration badge -- relocated here from the hero card. It
+         no longer competes for space in the hero grid; it now lives at
+         the top of the panel sitting directly under the hero card. -->
+    <div class="penetration-card" style="display:flex;align-items:center;gap:18px;">
+      <div style="flex:1;min-width:0;">
+        <div class="penetration-title">Trade Penetration</div>
+        <div class="penetration-value" id="tpValue">WAITING FOR ENTER</div>
+        <div class="penetration-meta">
+          <span>TP1 <b id="tpWindowValue">—</b></span>
+          <span>ENTER VALIDITY <b id="tradeWindowValue">DRAW 1–11</b></span>
+          <span>POSITION <b id="tradePositionValue">—</b></span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">
+        <div class="penetration-title" style="margin-bottom:6px;">4SIL Operator</div>
+        <div class="state-badge" id="neiOperatorBadge" data-tone="monitor" style="font-size:clamp(22px,3.8vw,42px);line-height:1;text-align:right;">MONITOR</div>
+      </div>
+    </div>
+
+    <!-- Topbar: engine verdict at a glance, same convention as the
+         sibling engines' "3SIL NEXT EVENT [COLOR] ETA ..." strip. -->
+    <div class="gauge-topbar">
+      <div class="gauge-topbar-row">
+        <span class="gauge-topbar-label">4SIL NEXT EVENT</span>
+        <div class="state-badge" id="neiRangeLabel" data-tone="closed">NO FORECAST</div>
+        <span class="gauge-topbar-meta">ETA <b id="neiPrimary">--</b></span>
+        <span class="gauge-topbar-meta">LIVE CALL OPENED <b id="neiLiveCallDraw">--</b></span>
+      </div>
+      <div class="gauge-topbar-sub" id="neiTimingStateLine">4SIL is not active.</div>
+    </div>
+
+    <!-- Twin gauge cards, same convention as the sibling engines' Hit
+         Pressure / Probability cards. -->
+    <div class="gauge-score-grid">
+      <div class="gauge-score-card">
+        <div class="gauge-score-label"><span>Timing Score</span><span>&mdash;</span></div>
+        <div class="gauge-score-value"><span id="neiTimingScore">--</span></div>
+        <div class="gauge-score-bar"><i id="neiTimingScoreBar" style="width:0%"></i></div>
+        <div class="gauge-score-foot">
+          <span>Confidence<b id="neiConfidenceBucket">--</b></span>
+          <span>Expected Window<b id="neiExpectedWindow">--</b></span>
+        </div>
+      </div>
+      <div class="gauge-score-card">
+        <div class="gauge-score-label"><span>Window Probability</span><span>&mdash;</span></div>
+        <div class="gauge-score-value"><span id="neiWindowProb">--</span></div>
+        <div class="gauge-score-bar"><i id="neiWindowProbBar" style="width:0%"></i></div>
+        <div class="gauge-score-foot">
+          <span>Timing State<b id="neiTimingStateBadge">--</b></span>
+          <span>Risk<b id="neiRiskLabel">--</b></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evidence grid, same convention as the sibling engines' Hit
+         Probability & Risk / Last Hit Record / Interval Statistics
+         three-card row. -->
+    <div class="gauge-grid3">
+      <div class="gauge-card">
+        <div class="gauge-card-title">🎯 Forecast &amp; Confidence</div>
+        <div class="metric-row"><span>Primary Draw</span><span style="flex:1"></span><b id="neiPrimaryDup">--</b></div>
+        <div class="metric-row"><span>Confidence</span><div class="bar"><i id="neiConfidenceBar" style="width:0%"></i></div><b id="neiConfidence">--</b></div>
+        <div class="metric-row"><span>Timing State</span><span style="flex:1"></span><b id="neiTimingStateBadge2">--</b></div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-card-title">📌 Live Call</div>
+        <div class="metric-row"><span>Live Call Opened</span><span style="flex:1"></span><b id="neiLiveCallDrawDup">--</b></div>
+        <div class="metric-row"><span>Spacing Regime</span><span style="flex:1"></span><b id="neiSpacingRegime">--</b></div>
+        <div class="footer-tag" id="neiSignatureLine" style="margin-top:8px;">No signature match yet.</div>
+      </div>
+      <div class="gauge-card">
+        <div class="gauge-card-title">📈 Latency Intelligence</div>
+        <div class="metric-row"><span>Call-History Intel</span><span style="flex:1"></span><b id="neiCallIntel">--</b></div>
+        <div class="metric-row"><span>Paper-Trader Intel</span><span style="flex:1"></span><b id="neiPaperIntel">--</b></div>
+        <div class="metric-row"><span>Fused Latency</span><span style="flex:1"></span><b id="neiFusedLatency">--</b></div>
+      </div>
+    </div>
+
+    <div class="gauge-section-label">📊 Timing Distribution</div>
+    <div id="neiDistribution" class="empty">No forecast yet -- insufficient intelligence.</div>
+    <div class="gauge-section-label">📋 Prediction Evaluation</div>
+    <div class="kpi-grid" id="neiEvalGrid"></div>
+
+    <div class="scroll-x" style="margin-top:14px;">
+      <table id="neiPredictionsTable">
+        <thead><tr><th>Opened</th><th>Draw</th><th>Timing State</th><th>Range</th><th>Confidence</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Call History</h2>
+    <div class="scroll-x">
+      <table id="callTable">
+        <thead><tr><th>Time</th><th>Draw</th><th>State</th><th>TP</th><th>Window</th><th>Confidence</th><th>Result</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>4SIL Paper Trader <span class="badge" id="ptStateBadge" style="margin-left:8px;">WAITING</span>
+      <button type="button" class="pt-settings-toggle" id="ptSettingsToggle">⚙ SETTINGS</button>
+      <button type="button" class="pt-settings-toggle" id="ptResetBtn" style="border-color:rgba(255,60,60,.35);color:var(--red);margin-right:6px;">↺ RESET</button>
+    </h2>
+
+    <div class="pt-settings hidden" id="ptSettingsPanel">
+      <div class="pt-field">
+        <label for="ptCapitalInput">Starting / Reset Capital (₦)</label>
+        <input type="number" id="ptCapitalInput" min="1" step="1">
+      </div>
+      <label>Ladder Stakes — per color, per stage (₦)</label>
+      <div class="pt-ladder-grid" id="ptLadderGrid"></div>
+      <div class="pt-settings-actions">
+        <button type="button" class="pt-btn" id="ptSettingsSave">Save &amp; Apply</button>
+        <button type="button" class="pt-btn-secondary" id="ptSettingsAddStage">+ Add Stage</button>
+        <button type="button" class="pt-btn-secondary" id="ptSettingsRemoveStage">− Remove Stage</button>
+        <span class="pt-settings-msg" id="ptSettingsMsg"></span>
+      </div>
+      <div class="pt-settings-note">Saving restarts the paper-trading ledger (cycle, window, ladder position, capital and trade log) using the new settings — it does not touch 4SIL itself. Stake shown per color; each draw stakes 3&times; this amount (RED+BLUE+GREEN).</div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="metric-row"><span>Signal</span><span style="flex:1"></span><b id="ptSignal">--</b></div>
+        <div class="metric-row"><span>Window</span><span style="flex:1"></span><b id="ptWindow">--</b></div>
+        <div class="metric-row"><span>Window Progress</span><div class="bar"><i id="ptWindowBar" style="width:0%"></i></div><b id="ptWindowProgress">0 / 11</b></div>
+        <div class="metric-row"><span>Window Hits / Misses</span><span style="flex:1"></span><b id="ptWindowHitsMisses">0 / 0</b></div>
+        <div class="metric-row"><span>Ladder Stage</span><span style="flex:1"></span><b id="ptLadderStage">1 / 12</b></div>
+        <div class="metric-row"><span>Stake / Color</span><span style="flex:1"></span><b id="ptStake">--</b></div>
+        <div class="metric-row"><span>Total / Draw</span><span style="flex:1"></span><b id="ptTotalPerDraw">--</b></div>
+        <div class="metric-row"><span>Attempt</span><span style="flex:1"></span><b id="ptAttempt">0 / 3</b></div>
+        <div class="metric-row"><span>Consecutive Hits</span><span style="flex:1"></span><b id="ptConsecutiveHits">0</b></div>
+      </div>
+      <div>
+        <div class="metric-row"><span>Current Cycle P/L</span><span style="flex:1"></span><b id="ptCyclePnL">--</b></div>
+        <div class="metric-row"><span>Paper Capital</span><span style="flex:1"></span><b id="ptCapital">--</b></div>
+        <div class="metric-row"><span>Realized P/L</span><span style="flex:1"></span><b id="ptRealizedPnL">--</b></div>
+        <div class="metric-row"><span>ROI</span><span style="flex:1"></span><b id="ptRoi">--</b></div>
+        <div class="metric-row"><span>Total Trades</span><span style="flex:1"></span><b id="ptTotalTrades">0</b></div>
+        <div class="metric-row"><span>Hit Rate</span><span style="flex:1"></span><b id="ptHitRate">--</b></div>
+        <div class="footer-tag" id="ptLastReset" style="margin-top:10px;">No reset recorded yet.</div>
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:16px;">
+      <div>
+        <h2 style="margin-bottom:8px;">Recent Trades</h2>
+        <div class="scroll-x">
+          <table id="ptTradeTable">
+            <thead><tr><th>Draw</th><th>Window</th><th>Stage</th><th>Stake</th><th>Result</th><th>Color</th><th>Net</th><th>Reset</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin-bottom:8px;">By Ladder Stage</h2>
+        <div class="scroll-x">
+          <table id="ptStageTable">
+            <thead><tr><th>Stage</th><th>Stake</th><th>Freq</th><th>Hit %</th><th>P/L</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Evaluation / Performance Log</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="two-col" style="margin-top:18px;">
+      <div>
+        <h2 style="margin-bottom:8px;">By Season Stage</h2>
+        <table id="stageTable"><thead><tr><th>Stage</th><th>Calls</th><th>Hit %</th><th>Avg Draws</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div>
+        <h2 style="margin-bottom:8px;">By Gate Profile</h2>
+        <table id="gateProfileTable"><thead><tr><th>Combination</th><th>Calls</th><th>Hit %</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const STATE_TONE = {
+  'ENTER':'enter', 'WATCH':'watch', 'APPROACHING TP':'approach',
+  'HOLD':'hold', 'PAUSE':'pause', 'PREPARE':'prepare', 'TAKE PROFIT':'tp', 'WINDOW CLOSED':'window', 'CLOSED':'closed', 'MONITOR':'monitor'
+};
+
+function fmtTime(iso){
+  if(!iso) return '--:--:--';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-GB',{hour12:false});
+}
+
+function resolveHeroOperatorState(t){
+  // HARD UI SAFETY: the Hero Card must never surface the legacy
+  // season-life EXIT WARNING vocabulary.  Operator state + trade
+  // penetration are the only authorities for the top card.
+  const raw = String(t.state || '').toUpperCase();
+  const op = String(t.operatorState || '').toUpperCase();
+  const legacyEnter = !!(t.legacyBadge && t.legacyBadge.enterNow);
+
+  if (raw === 'TAKE PROFIT') return 'TAKE PROFIT';
+  if (raw === 'WINDOW CLOSED') return 'WINDOW CLOSED';
+  if (raw === 'ENTER' || op === 'ENTER' || legacyEnter) return 'ENTER';
+  if (raw === 'PAUSE') return 'PAUSE';
+  if (op === 'PREPARE') return 'PREPARE';
+  if (op === 'MONITOR') return 'MONITOR';
+
+  // Any legacy EXIT / EXIT WARNING / CLOSED / HOLD state is deliberately
+  // downgraded to the current 4SIL operator state.  Closing-risk telemetry
+  // must never become an execution command.
+  return op === 'PREPARE' ? 'PREPARE' : 'MONITOR';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 4SIL LADDER COUNTER
+//
+// BUGFIX: this card used to derive ladder position from the hero payload's
+// tradeWindowPosition (a simple draw count since the current call opened)
+// mapped onto a fixed, locally-adjustable attemptsPerStage — so it advanced
+// / reset every N draws by construction, completely independent of the
+// paper trader's actual reset rules (2 consecutive hits at the same stage,
+// or windowHitResetThreshold hits inside the draw window -- see
+// paperTraderEngine.js). It also carried its own hardcoded stake table,
+// which had drifted out of sync with the server's real ladder. Net effect:
+// this card silently repeated/reset every 3 trades no matter what the real
+// trader was doing.
+//
+// FIX: no local guessing, no local storage, no independently-adjustable
+// settings. This card is now a pure, read-only mirror of the live Paper
+// Trader snapshot (same object renderPaperTrader() already renders from,
+// same field names as paperTraderEngine.js's buildSummary()):
+//   pt.config.ladder / pt.config.attemptsPerStage / pt.config.windowHitResetThreshold
+//   pt.cycle.stage / pt.cycle.attempt / pt.cycle.consecutiveHits
+//   pt.window.hits
+//   pt.lastReset
+// Whatever the paper trader is actually doing is what this card shows --
+// it cannot drift from it because it no longer computes anything itself.
+// ─────────────────────────────────────────────────────────────────────────────
+const LADDER_STEPS_FALLBACK = [50,100,150,200,300,400,600,700,1000,1500,2000,3000];
+
+/**
+ * Renders the ladder counter directly from the live Paper Trader snapshot.
+ * @param {object} pt - snapshot.paperTrader, same object passed to renderPaperTrader().
+ */
+function ladderRender(pt){
+  pt = pt || {};
+  const cfg = pt.config || {};
+  const ladderTable = Array.isArray(cfg.ladder) && cfg.ladder.length ? cfg.ladder : LADDER_STEPS_FALLBACK;
+  const attemptsPerStage = cfg.attemptsPerStage || 3;
+  const windowHitResetThreshold = cfg.windowHitResetThreshold || 3;
+
+  document.getElementById('ladderAttemptsPerStageValue').textContent = attemptsPerStage;
+
+  const cycle = pt.cycle || {};
+  const win = pt.window || {};
+  const row = document.getElementById('ladderStepsRow');
+  const hitBadgeEl = document.getElementById('ladderHitBadge');
+  row.innerHTML = '';
+
+  const reset = pt.lastReset;
+  document.getElementById('ladderLastReset').textContent = reset
+    ? `Last reset @ draw ${reset.drawId}: ${String(reset.reason||'').replace(/_/g,' ').replace(/\+/g,' + ')}`
+    : 'No reset recorded yet.';
+
+  const hasLiveCycle = !!(pt && pt.cycle) && (pt.tradingState === 'ACTIVE' || pt.tradingState === 'LADDER_LIMIT_REACHED' || (cycle.attempt || 0) > 0 || (win.eligibleDraws || 0) > 0);
+
+  if(!hasLiveCycle){
+    document.getElementById('ladderCurrentStake').textContent = '—';
+    hitBadgeEl.textContent = '';
+    document.getElementById('ladderStatusLine').textContent = 'Awaiting first eligible trade…';
+    ladderTable.forEach(function(stake){
+      const chip = document.createElement('span');
+      chip.textContent = stake.toLocaleString();
+      chip.style.cssText = 'font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:5px;border:1px solid var(--panel-border);color:var(--dim);background:transparent;transition:all .2s';
+      row.appendChild(chip);
+    });
+    return;
+  }
+
+  const stage = cycle.stage || 1;
+  const stageIndex = Math.min(ladderTable.length - 1, Math.max(0, stage - 1));
+  const currentStake = ladderTable[stageIndex];
+
+  document.getElementById('ladderCurrentStake').textContent = currentStake.toLocaleString();
+  hitBadgeEl.textContent = `Trade ${cycle.attempt||0} of ${attemptsPerStage} · ${cycle.consecutiveHits||0} consecutive hit${(cycle.consecutiveHits||0)===1?'':'s'}`;
+
+  document.getElementById('ladderStatusLine').textContent =
+    `Ladder ${stage} @ ${currentStake.toLocaleString()} — ${win.hits||0}/${windowHitResetThreshold} window hits, ` +
+    `${cycle.consecutiveHits||0} consecutive hit${(cycle.consecutiveHits||0)===1?'':'s'} on this stage` +
+    (pt.tradingState === 'LADDER_LIMIT_REACHED' ? ' — LADDER LIMIT REACHED.' : '.');
+
+  ladderTable.forEach(function(stake, i){
+    const chip = document.createElement('span');
+    chip.textContent = stake.toLocaleString();
+    const isActive = i === stageIndex;
+    chip.style.cssText = [
+      'font-family:var(--mono)',
+      'font-size:10px',
+      'padding:2px 7px',
+      'border-radius:5px',
+      'border:1px solid ' + (isActive ? 'var(--amber)' : 'var(--panel-border)'),
+      'color:' + (isActive ? 'var(--amber)' : 'var(--dim)'),
+      'background:' + (isActive ? 'rgba(255,184,77,.1)' : 'transparent'),
+      'font-weight:' + (isActive ? '700' : '400'),
+      'transition:all .2s'
+    ].join(';');
+    row.appendChild(chip);
+  });
+}
+
+// Initial render on page load
+// ladderRender panel removed — space repurposed for 4SIL-GCI.
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function renderHero(t){
+  const state = resolveHeroOperatorState(t);
+  const tone = STATE_TONE[state] || 'monitor';
+  const badge = document.getElementById('stateBadge');
+  const entryDrawId = t.entryDrawId != null ? String(t.entryDrawId) : null;
+  // The operator card must identify the exact draw that opened the current
+  // 4SIL trade. Never substitute a relative position such as DRAW 1.
+  const badgeText = (state === 'ENTER' && entryDrawId) ? `ENTER @ DRAW ${entryDrawId}` : state;
+  badge.textContent = badgeText;
+  badge.dataset.tone = tone;
+
+  // Mirror the operator signal into the penetration card's 4SIL OPERATOR badge.
+  const neiOpBadge = document.getElementById('neiOperatorBadge');
+  if (neiOpBadge) { neiOpBadge.textContent = badgeText; neiOpBadge.dataset.tone = tone; }
+
+  const op = t.operatorState || state;
+  document.getElementById('operatorStateValue').textContent = op;
+  document.getElementById('reasoningLine').textContent = t.reasoning || '';
+
+  // Trade Penetration badge now lives inside #neiPanel (moved there from
+  // the hero card), but is still driven from the same timing snapshot, so
+  // it's still updated here in renderHero. The Timing Bond block
+  // (coreWindow/safetyWindow) remains removed.
+  const tpWindow = t.tpWindow || t.coreWindow;
+  document.getElementById('tpValue').textContent = (t.tp != null && entryDrawId)
+    ? `TP @ DRAW ${entryDrawId}`
+    : (state === 'ENTER' ? 'TP WINDOW ACTIVE' : 'WAITING FOR ENTER');
+  document.getElementById('tpWindowValue').textContent = tpWindow ? `DRAW ${tpWindow[0]}–${tpWindow[1]}` : '—';
+  document.getElementById('tradeWindowValue').textContent = t.tradeWindow ? `DRAW ${t.tradeWindow[0]}–${t.tradeWindow[1]}` : 'DRAW 1–11';
+  document.getElementById('tradePositionValue').textContent = t.tradeWindowPosition ? `DRAW ${t.tradeWindowPosition}` : '—';
+  document.getElementById('tradeWindowMetric').textContent = t.tradeWindow ? `DRAW ${t.tradeWindow[0]} — ${t.tradeWindow[1]}` : 'DRAW 1 — 11';
+
+  const penetrationLive = state === 'ENTER' || state === 'TAKE PROFIT';
+  document.getElementById('penetrationStateValue').textContent = penetrationLive
+    ? (state === 'TAKE PROFIT' ? 'TAKE PROFIT' : 'ACTIVE')
+    : (state === 'PAUSE' || state === 'PREPARE' ? 'PAUSED' : 'STANDBY');
+  document.getElementById('actionValue').textContent = t.action || 'WAIT FOR 4SIL ENTER';
+
+  const conf = t.confidence || 0;
+  document.getElementById('confidenceValue').textContent = conf + '%';
+  const circumference = 352;
+  document.getElementById('ringProgress').style.strokeDashoffset = circumference - (circumference * Math.min(100,conf) / 100);
+
+  document.getElementById('healthBar').style.width = (t.seasonHealth||0) + '%';
+  document.getElementById('healthValue').textContent = (t.seasonHealth||0) + '%';
+  document.getElementById('timingBar').style.width = (t.timingStrength||0) + '%';
+  document.getElementById('timingValue').textContent = (t.timingStrength||0) + '%';
+  document.getElementById('gateValue').textContent = `${t.gateConfirmations||0} / ${t.gateRequired||0}`;
+
+  renderLegacyBadge(t.legacyBadge);
+}
+
+/**
+ * Renders the 4SIL Badge + its dual color pick (supporting evidence
+ * only, straight off hero.legacyBadge -- see buildLegacyBadge()'s header
+ * in src/foursil/timingEngine.js). This function computes nothing: it
+ * only formats fields that are already final by the time they arrive
+ * here, exactly like every other render* function in this file
+ * (non-negotiable #24).
+ */
+function renderLegacyBadge(lb){
+  const el = document.getElementById('legacyBadge');
+  if (!lb) { el.style.display = 'none'; return; }
+  el.style.display = '';
+
+  document.getElementById('legacyOperatorAction').textContent = lb.operatorAction || '—';
+
+  const dp = lb.dualPick || {};
+  document.getElementById('dualSwatch1').className = 'dual-swatch' + (dp.color ? ' ' + dp.color : '');
+  document.getElementById('dualColor1').textContent = dp.color || '—';
+  document.getElementById('dualConf1').textContent = dp.confidence != null ? dp.confidence + '%' : '';
+
+  document.getElementById('dualSwatch2').className = 'dual-swatch' + (dp.secondColor ? ' ' + dp.secondColor : '');
+  document.getElementById('dualColor2').textContent = dp.secondColor || '—';
+  document.getElementById('dualConf2').textContent = dp.secondConfidence != null ? dp.secondConfidence + '%' : '';
+
+  document.getElementById('legacyBadgeSummary').textContent = lb.nextEventSummary || lb.reasoning || '';
+}
+
+function renderGates(gateSummary){
+  const el = document.getElementById('gateMatrix');
+  el.innerHTML = '';
+  (gateSummary.gates||[]).forEach(g=>{
+    const row = document.createElement('div'); row.className='gate-row';
+    row.innerHTML = `<span class="gate-status ${g.status==='CONFIRMED'?'on':'off'}">${g.status==='CONFIRMED'?'✓':'—'}</span>
+      <span style="flex:1;margin-left:10px;color:var(--text)">${g.id.replace(/_/g,' ')}</span>
+      <span style="width:40px;text-align:right;color:var(--dim)">${g.weight}</span>`;
+    el.appendChild(row);
+  });
+  document.getElementById('gateFooter').innerHTML =
+    `CONFIRMED: <b>${gateSummary.confirmed}</b> / REQUIRED: <b>${gateSummary.required}</b> &nbsp;|&nbsp; CONFIDENCE: <b>${gateSummary.confidence}%</b> / REQUIRED: <b>${gateSummary.confidenceRequired}%</b> &nbsp;|&nbsp; 4SIL: <b style="color:${gateSummary.verdict==='ENTER'?'var(--emerald)':'var(--dim)'}">${gateSummary.verdict}</b>`;
+}
+
+function renderCalls(calls){
+  const tb = document.querySelector('#callTable tbody');
+  tb.innerHTML='';
+  if(!calls || calls.length===0){
+    tb.innerHTML = `<tr><td colspan="7" class="empty">No calls logged yet.</td></tr>`;
+    return;
+  }
+  calls.forEach(c=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${fmtTime(c.time)}</td><td>${c.draw}</td><td>${c.state}</td><td>${c.tp ?? '—'}</td><td>${c.window}</td><td>${c.confidence}%</td><td><span class="badge ${c.result}">${c.result}</span></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function fmtNaira(n){
+  if(n==null || Number.isNaN(n)) return '--';
+  const sign = n < 0 ? '-' : '';
+  return sign + '\u20a6' + Math.abs(Math.round(n)).toLocaleString();
+}
+
+function renderPaperTrader(pt){
+  if(!pt) return;
+  // NOTE: field names below must match paperTraderEngine.js's buildSummary()
+  // output exactly (tradingState/cycle/window/capital/performance.overall/
+  // performance.ladder.byStage) -- there is no pt.state or pt.ladder object,
+  // and pt.capital has no `.current`/`.roiPct`. See ENGINE_FIELD_SHAPE notes
+  // in that file's buildSummary().
+  const stateBadge = document.getElementById('ptStateBadge');
+  stateBadge.textContent = pt.tradingState || 'WAITING';
+  stateBadge.className = 'badge ' + (pt.tradingState === 'ACTIVE' ? 'HIT' : (pt.tradingState === 'LADDER_LIMIT_REACHED' ? 'MISS' : 'Pending'));
+
+  document.getElementById('ptSignal').textContent = pt.signal || '--';
+
+  const cfg = pt.config || {};
+  const ladderTable = Array.isArray(cfg.ladder) ? cfg.ladder : [];
+  const windowSize = cfg.windowSize || 10;
+  const attemptsPerStage = cfg.attemptsPerStage || 3;
+
+  const w = pt.window || {};
+  document.getElementById('ptWindow').textContent = (w.windowId != null ? `#${w.windowId}` : '--');
+  document.getElementById('ptWindowProgress').textContent = `${w.eligibleDraws||0} / ${windowSize}`;
+  const pct = windowSize ? Math.min(100, Math.round((w.eligibleDraws||0) / windowSize * 100)) : 0;
+  document.getElementById('ptWindowBar').style.width = pct + '%';
+  document.getElementById('ptWindowHitsMisses').textContent = `${w.hits||0} / ${w.misses||0}`;
+
+  const cycle = pt.cycle || {};
+  const stage = cycle.stage || 1;
+  const stakePerColor = ladderTable[stage - 1] || 0;
+  document.getElementById('ptLadderStage').textContent = `${stage} / ${ladderTable.length || 12}`;
+  document.getElementById('ptStake').textContent = fmtNaira(stakePerColor);
+  document.getElementById('ptTotalPerDraw').textContent = fmtNaira(stakePerColor * 3);
+  document.getElementById('ptAttempt').textContent = `${cycle.attempt||0} / ${attemptsPerStage}`;
+  document.getElementById('ptConsecutiveHits').textContent = cycle.consecutiveHits || 0;
+
+  const pnlEl = document.getElementById('ptCyclePnL');
+  pnlEl.textContent = fmtNaira(cycle.netPnL);
+  pnlEl.style.color = (cycle.netPnL||0) >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+  const cap = pt.capital || {};
+  document.getElementById('ptCapital').textContent = fmtNaira(cap.currentCapital);
+  const realizedEl = document.getElementById('ptRealizedPnL');
+  realizedEl.textContent = fmtNaira(cap.realizedPnL);
+  realizedEl.style.color = (cap.realizedPnL||0) >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+  const perf = pt.performance || {};
+  const overall = perf.overall || {};
+  document.getElementById('ptRoi').textContent = (overall.roi!=null ? overall.roi : 0) + '%';
+  document.getElementById('ptTotalTrades').textContent = overall.totalTrades || 0;
+  document.getElementById('ptHitRate').textContent = (overall.hitRate!=null ? overall.hitRate : 0) + '%';
+
+  const reset = pt.lastReset;
+  document.getElementById('ptLastReset').textContent = reset
+    ? `Last reset @ draw ${reset.drawId}: ${reset.reason.replace(/_/g,' ').replace(/\+/g,' + ')} — cycle P/L ${fmtNaira(reset.cyclePnL)}`
+    : 'No reset recorded yet.';
+}
+
+// ---------------------------------------------------------------------------
+// Paper Trader settings editor -- stake ladder / starting capital, backed by
+// GET/POST /api/v1/paper-trader/config (src/routes/paperTraderApi.js). Only
+// populated from the live snapshot once (or right after a successful save),
+// never on every 6s poll, so it doesn't clobber values the operator is
+// mid-edit on.
+// ---------------------------------------------------------------------------
+let ptSettingsInitialized = false;
+
+function renderLadderInputs(ladder){
+  const grid = document.getElementById('ptLadderGrid');
+  grid.innerHTML = '';
+  ladder.forEach((stake, i) => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<label>Stage ${i+1}</label><input type="number" min="1" step="1" class="pt-ladder-stake" value="${stake}">`;
+    grid.appendChild(wrap);
+  });
+}
+
+function readLadderInputs(){
+  return Array.from(document.querySelectorAll('.pt-ladder-stake')).map(inp => Number(inp.value));
+}
+
+function populatePaperTraderSettings(pt){
+  if(ptSettingsInitialized) return;
+  const cfg = (pt && pt.config) || {};
+  const capital = (pt && pt.capital && pt.capital.currentCapital) || cfg.startingCapital || 100000;
+  const ladder = Array.isArray(cfg.ladder) && cfg.ladder.length ? cfg.ladder : [50,100,150,200,300,400,600,700,1000,1500,2000,3000];
+  document.getElementById('ptCapitalInput').value = capital;
+  renderLadderInputs(ladder);
+  ptSettingsInitialized = true;
+}
+
+function setPtSettingsMsg(text, isError){
+  const el = document.getElementById('ptSettingsMsg');
+  el.textContent = text;
+  el.className = 'pt-settings-msg ' + (isError ? 'err' : 'ok');
+  if(text) setTimeout(() => { el.textContent=''; el.className='pt-settings-msg'; }, 6000);
+}
+
+document.getElementById('ptSettingsToggle').addEventListener('click', () => {
+  document.getElementById('ptSettingsPanel').classList.toggle('hidden');
+});
+
+document.getElementById('ptSettingsAddStage').addEventListener('click', () => {
+  const ladder = readLadderInputs();
+  const last = ladder[ladder.length-1] || 50;
+  ladder.push(Math.round(last * 1.5));
+  renderLadderInputs(ladder);
+});
+
+document.getElementById('ptSettingsRemoveStage').addEventListener('click', () => {
+  const ladder = readLadderInputs();
+  if(ladder.length <= 1) return;
+  ladder.pop();
+  renderLadderInputs(ladder);
+});
+
+document.getElementById('ptSettingsSave').addEventListener('click', async () => {
+  const saveBtn = document.getElementById('ptSettingsSave');
+  const startingCapital = Number(document.getElementById('ptCapitalInput').value);
+  const ladder = readLadderInputs();
+
+  if(!Number.isFinite(startingCapital) || startingCapital <= 0){
+    setPtSettingsMsg('Capital must be a positive number.', true);
+    return;
+  }
+  if(ladder.length === 0 || ladder.some(n => !Number.isFinite(n) || n <= 0)){
+    setPtSettingsMsg('Every ladder stage needs a positive stake.', true);
+    return;
+  }
+
+  saveBtn.disabled = true;
+  try{
+    const res = await fetch('/api/v1/paper-trader/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startingCapital, ladder })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      setPtSettingsMsg((data && data.details && data.details.join(' ')) || 'Save failed.', true);
+    } else {
+      setPtSettingsMsg('Saved — paper trader restarted with new settings.', false);
+      ptSettingsInitialized = false; // allow the next refresh() to re-sync the form from the server
+      refresh();
+    }
+  }catch(e){
+    setPtSettingsMsg('Save failed: ' + e.message, true);
+  }finally{
+    saveBtn.disabled = false;
+  }
+});
+
+document.getElementById('ptResetBtn').addEventListener('click', async () => {
+  const resetBtn = document.getElementById('ptResetBtn');
+  if(!confirm('Reset the paper trader? This clears the current ledger (cycle, window, ladder position, capital, trade log) back to the configured starting capital. This cannot be undone.')) return;
+
+  const originalText = resetBtn.textContent;
+  resetBtn.disabled = true;
+  resetBtn.textContent = '↺ RESETTING…';
+  try{
+    const res = await fetch('/api/v1/paper-trader/reset', { method: 'POST' });
+    const data = await res.json();
+    if(!res.ok){
+      setPtSettingsMsg((data && data.error) || 'Reset failed.', true);
+    } else {
+      setPtSettingsMsg('Paper trader ledger reset.', false);
+      refresh();
+    }
+  }catch(e){
+    setPtSettingsMsg('Reset failed: ' + e.message, true);
+  }finally{
+    resetBtn.disabled = false;
+    resetBtn.textContent = originalText;
+  }
+});
+
+function renderPaperTraderTrades(trades){
+  const tb = document.querySelector('#ptTradeTable tbody');
+  tb.innerHTML='';
+  if(!trades || trades.length===0){
+    tb.innerHTML = `<tr><td colspan="8" class="empty">No trades logged yet.</td></tr>`;
+    return;
+  }
+  trades.slice(0,25).forEach(t=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${t.drawId}</td><td>${t.windowId} (${t.windowDrawNumber})</td><td>${t.ladderStage}</td><td>${fmtNaira(t.stakePerColor)}</td><td><span class="badge ${t.result}">${t.result}</span></td><td>${t.winningColor || '—'}</td><td style="color:${t.netPnL>=0?'var(--emerald)':'var(--red)'}">${fmtNaira(t.netPnL)}</td><td>${t.resetTriggered ? t.resetReason.replace(/_/g,' ').replace(/\+/g,' + ') : '—'}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function renderPaperTraderStages(pt){
+  const tb = document.querySelector('#ptStageTable tbody');
+  tb.innerHTML='';
+  const cfg = (pt && pt.config) || {};
+  const ladderTable = Array.isArray(cfg.ladder) ? cfg.ladder : [];
+  // NOTE: byStage lives at performance.ladder.byStage, not performance.byStage,
+  // and its rows use {trades, hitRate, pnl} -- not {frequency, hitRatePct, pnL}.
+  // It also has no stakePerColor of its own; that comes from cfg.ladder[stage-1].
+  const perf = (pt && pt.performance) || {};
+  const byStage = (perf.ladder && perf.ladder.byStage) || [];
+  if(byStage.length===0){
+    tb.innerHTML = `<tr><td colspan="5" class="empty">No stage data yet.</td></tr>`;
+    return;
+  }
+  byStage.forEach(s=>{
+    const tr = document.createElement('tr');
+    const stakePerColor = ladderTable[s.stage - 1] || 0;
+    tr.innerHTML = `<td>${s.stage}</td><td>${fmtNaira(stakePerColor)}</td><td>${s.trades}</td><td>${s.hitRate!=null?s.hitRate:0}%</td><td style="color:${s.pnl>=0?'var(--emerald)':'var(--red)'}">${fmtNaira(s.pnl)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// 4SIL Next Event Intelligence Engine (4SIL-NEI) -- see this file's HTML
+// comment above #neiPanel for the full architecture note. `nei` is the
+// exact object produced by nextEventIntelEngine.js's buildNEISummary():
+// { engine, engineState, forecast, intel:{call,paper,spacing,signature,fusion},
+//   liveCall, predictions, evaluation, updatedAt }.
+// STATE-BADGE TONE MAPPING: engineState DORMANT/ARMED reuse the existing
+// state-badge tones (closed/monitor); once FORECASTING, the tone instead
+// reflects the forecast's own timingState so IMMEDIATE reads as urgent
+// (enter-green) and EXTENDED reads as calm (pause-cyan) -- the engine
+// state alone ("a call is open") doesn't say how soon the event is
+// expected, only the forecast does.
+const NEI_TIMING_TONE = {
+  'IMMEDIATE': 'enter',
+  'NEAR': 'approach',
+  'DEVELOPING': 'watch',
+  'EXTENDED': 'pause',
+  'NO FORECAST': 'closed'
+};
+
+function neiFmtLatency(stats){
+  if(!stats || stats.median == null) return '—';
+  return `${stats.median} med / ${stats.weightedMean} avg (n=${stats.samples}${stats.censoredSamples ? '+' + stats.censoredSamples + ' censored' : ''})`;
+}
+
+// Small text-bucket helpers -- purely presentational groupings of the
+// exact numbers/enums the engine already emits (same spirit as the
+// existing NEI_TIMING_TONE map), so the twin gauge cards can show a
+// LOW/MODERATE/HIGH-style readout without inventing any new metric.
+function neiConfidenceBucket(pct){
+  if(pct == null) return '--';
+  if(pct >= 66) return 'HIGH';
+  if(pct >= 33) return 'MODERATE';
+  return 'LOW';
+}
+const NEI_RISK_LABEL = {
+  'IMMEDIATE': 'URGENT',
+  'NEAR': 'ELEVATED',
+  'DEVELOPING': 'MODERATE',
+  'EXTENDED': 'LOW',
+  'NO FORECAST': '--'
+};
+const NEI_RISK_TONE = {
+  'URGENT': 'tone-high',
+  'ELEVATED': 'tone-high',
+  'MODERATE': 'tone-moderate',
+  'LOW': 'tone-low'
+};
+
+function renderNEI(nei){
+  const engineBadge = document.getElementById('neiEngineStateBadge');
+  const rangeBadge   = document.getElementById('neiRangeLabel');
+  const timingLine   = document.getElementById('neiTimingStateLine');
+  const riskEl       = document.getElementById('neiRiskLabel');
+
+  if(!nei || !nei.engineState){
+    engineBadge.innerText = 'DORMANT';
+    rangeBadge.innerText = 'NO FORECAST';
+    rangeBadge.dataset.tone = 'closed';
+    timingLine.innerText = 'Awaiting first snapshot…';
+    riskEl.innerText = '--';
+    riskEl.className = '';
+    return;
+  }
+
+  engineBadge.innerText = nei.engineState; // DORMANT | ARMED | FORECASTING
+
+  const f = nei.forecast;
+  if(!f){
+    // CONSTITUTIONAL RULE (see engine header): no forecast without an
+    // active 4SIL, or without enough intelligence yet -- render this as
+    // calmly as the Hero Card's own dormant state, never as an error.
+    rangeBadge.innerText = nei.engineState === 'DORMANT' ? 'NO FORECAST' : 'GATHERING INTEL';
+    rangeBadge.dataset.tone = 'closed';
+    timingLine.innerText = nei.engineState === 'DORMANT'
+      ? '4SIL is not active -- the Next Event Engine has no voice until 4SIL speaks.'
+      : '4SIL is armed but there is not yet enough call-history or paper-trader intelligence for a forecast.';
+    document.getElementById('neiPrimary').innerText = '--';
+    document.getElementById('neiPrimaryDup').innerText = '--';
+    document.getElementById('neiWindowProb').innerText = '--';
+    document.getElementById('neiWindowProbBar').style.width = '0%';
+    document.getElementById('neiConfidence').innerText = '--';
+    document.getElementById('neiConfidenceBar').style.width = '0%';
+    document.getElementById('neiConfidenceBucket').innerText = '--';
+    document.getElementById('neiTimingScore').innerText = '--';
+    document.getElementById('neiTimingScoreBar').style.width = '0%';
+    document.getElementById('neiExpectedWindow').innerText = '--';
+    document.getElementById('neiTimingStateBadge').innerText = '--';
+    document.getElementById('neiTimingStateBadge2').innerText = '--';
+    riskEl.innerText = '--';
+    riskEl.className = '';
+  } else {
+    rangeBadge.innerText = f.rangeLabel || (f.primary != null ? `DRAW ${f.primary}` : 'NO FORECAST');
+    rangeBadge.dataset.tone = NEI_TIMING_TONE[f.timingState] || 'closed';
+    timingLine.innerText = `${f.timingState} -- primary draw ${f.primary ?? '—'}`;
+    document.getElementById('neiPrimary').innerText = f.primary != null ? `Draw ${f.primary}` : '--';
+    document.getElementById('neiPrimaryDup').innerText = f.primary != null ? `Draw ${f.primary}` : '--';
+    document.getElementById('neiWindowProb').innerText = f.windowProbability != null ? `${f.windowProbability}%` : '--';
+    document.getElementById('neiWindowProbBar').style.width = `${f.windowProbability || 0}%`;
+    // FIX #5 in the engine: confidence and timingScore are deliberately
+    // two different numbers (empirical probability vs. fusion/urgency
+    // score) -- the UI keeps them visually distinct rather than picking
+    // one to call "confidence".
+    document.getElementById('neiConfidence').innerText = f.confidence != null ? `${f.confidence}%` : '--';
+    document.getElementById('neiConfidenceBar').style.width = `${f.confidence || 0}%`;
+    document.getElementById('neiConfidenceBucket').innerText = neiConfidenceBucket(f.confidence);
+    document.getElementById('neiTimingScore').innerText = f.timingScore != null ? `${f.timingScore} / 100` : '--';
+    document.getElementById('neiTimingScoreBar').style.width = `${f.timingScore || 0}%`;
+    document.getElementById('neiExpectedWindow').innerText = f.rangeLabel || (f.primary != null ? `DRAW ${f.primary}` : '--');
+    document.getElementById('neiTimingStateBadge').innerText = f.timingState || '--';
+    document.getElementById('neiTimingStateBadge2').innerText = f.timingState || '--';
+    const risk = NEI_RISK_LABEL[f.timingState] || '--';
+    riskEl.innerText = risk;
+    riskEl.className = NEI_RISK_TONE[risk] || '';
+  }
+
+  const intel = nei.intel || {};
+  document.getElementById('neiCallIntel').innerText = neiFmtLatency(intel.call);
+  document.getElementById('neiPaperIntel').innerText = neiFmtLatency(intel.paper);
+  document.getElementById('neiFusedLatency').innerText = intel.fusion && intel.fusion.fusedLatency != null
+    ? `${intel.fusion.fusedLatency} draws (n=${intel.fusion.totalSamples})` : '—';
+  document.getElementById('neiSpacingRegime').innerText = intel.spacing
+    ? `${intel.spacing.regime} (${intel.spacing.recentToBaselineRatio}x baseline)` : '—';
+  document.getElementById('neiLiveCallDraw').innerText = (nei.liveCall && nei.liveCall.openedDrawId) || '—';
+  document.getElementById('neiLiveCallDrawDup').innerText = (nei.liveCall && nei.liveCall.openedDrawId) || '—';
+
+  const sig = intel.signature;
+  document.getElementById('neiSignatureLine').innerText = !sig
+    ? 'No open call to match a signature against.'
+    : sig.trusted
+      ? `Signature match (${sig.basis}, n=${sig.sampleSize}): ${sig.hitRatePct}% historical hit rate, median latency ${sig.medianLatency ?? '—'} draws.`
+      : `Signature basis "${sig.basis}" only has ${sig.sampleSize} matching call(s) -- not yet trusted (advisory only).`;
+
+  // Timing distribution bars (blueprint §15) -- prefers the combined
+  // call+paper distribution when available, falling back to whichever
+  // single stream has data.
+  const distEl = document.getElementById('neiDistribution');
+  const dist = (intel.fusion && intel.fusion.combinedDistribution && intel.fusion.combinedDistribution.length)
+    ? intel.fusion.combinedDistribution
+    : (intel.call && intel.call.distribution && intel.call.distribution.length ? intel.call.distribution
+      : (intel.paper && intel.paper.distribution) || []);
+  if(!dist.length){
+    distEl.className = 'empty';
+    distEl.innerText = 'No forecast yet -- insufficient intelligence.';
+  } else {
+    distEl.className = '';
+    distEl.innerHTML = dist.map(d => `
+      <div class="metric-row">
+        <span style="width:52px;">DRAW ${d.draw}</span>
+        <div class="bar"><i style="width:${d.pct}%"></i></div>
+        <b style="width:44px;text-align:right;">${d.pct}%</b>
+      </div>`).join('');
+  }
+
+  // Evaluation KPI grid -- same .kpi-grid convention used elsewhere.
+  const ev = nei.evaluation || {};
+  const evalGrid = document.getElementById('neiEvalGrid');
+  const kpis = [
+    ['Predictions', ev.totalPredictions ?? 0],
+    ['Resolved', ev.resolvedPredictions ?? 0],
+    ['Accurate', ev.accuratePredictions ?? 0],
+    ['Accuracy Rate', ev.accuracyRate != null ? `${ev.accuracyRate}%` : '—'],
+    ['Avg Actual Latency', ev.avgActualLatency != null ? `${ev.avgActualLatency} draws` : '—']
+  ];
+  evalGrid.innerHTML = kpis.map(([label,val]) => `
+    <div style="background:var(--panel);padding:10px;text-align:center;">
+      <div style="font-family:var(--mono);font-size:9.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;">${label}</div>
+      <div style="font-weight:800;font-size:16px;margin-top:4px;">${val}</div>
+    </div>`).join('');
+
+  // Prediction log -- most recent first, per predictions.slice(0,50) from
+  // the engine itself.
+  const tb = document.querySelector('#neiPredictionsTable tbody');
+  const preds = nei.predictions || [];
+  if(!preds.length){
+    tb.innerHTML = '<tr><td colspan="6" style="color:var(--dim);text-align:center;">No predictions logged yet.</td></tr>';
+  } else {
+    tb.innerHTML = preds.map(p => {
+      const range = p.forecast && p.forecast.range ? `${p.forecast.range[0]}–${p.forecast.range[1]}` : '—';
+      const conf  = p.forecast && p.forecast.confidence != null ? `${p.forecast.confidence}%` : '—';
+      let result;
+      if(p.status === 'OPEN') result = '<span style="color:var(--dim)">PENDING</span>';
+      else if(p.status === 'HIT') result = p.accurate
+        ? `<span style="color:var(--emerald)">HIT (accurate, ${p.actualDrawsToEvent}d, ${p.resolvedColor||''})</span>`
+        : `<span style="color:var(--amber)">HIT (missed range, ${p.actualDrawsToEvent}d, ${p.resolvedColor||''})</span>`;
+      else result = `<span style="color:var(--dim)">CLOSED (${p.closedReason||'—'})</span>`;
+      return `<tr>
+        <td>${fmtTime(p.openedAt)}</td>
+        <td>${p.callDrawId ?? '—'}</td>
+        <td>${(p.forecast && p.forecast.timingState) || '—'}</td>
+        <td>${range}</td>
+        <td>${conf}</td>
+        <td>${result}</td>
+      </tr>`;
+    }).join('');
+  }
+
+}
+
+function renderEvaluation(evalData){
+  const grid = document.getElementById('kpiGrid');
+  const t = evalData.totals || {};
+  grid.innerHTML = [
+    ['CALLS', t.totalCalls],
+    ['TP HIT', (t.tpAccuracyPct??0)+'%'],
+    ['CORE', (t.coreWindowHitRatePct??0)+'%'],
+    ['EXIT', (t.exitAccuracyPct??0)+'%'],
+    ['FALSE', (t.falseEntryRatePct??0)+'%']
+  ].map(([label,val])=>`<div class="kpi"><b>${val}</b><span>${label}</span></div>`).join('');
+
+  const stageTb = document.querySelector('#stageTable tbody');
+  stageTb.innerHTML = (evalData.bySeasonStage||[]).map(r=>
+    `<tr><td>${r.stage}</td><td>${r.calls}</td><td>${r.hitRatePct}%</td><td>${r.avgDrawsToHit ?? '—'}</td></tr>`
+  ).join('') || `<tr><td colspan="4" class="empty">No resolved calls yet.</td></tr>`;
+
+  const gpTb = document.querySelector('#gateProfileTable tbody');
+  gpTb.innerHTML = (evalData.byGateProfile||[]).map(r=>
+    `<tr><td>${r.combo}</td><td>${r.calls}</td><td>${r.hitRatePct}%</td></tr>`
+  ).join('') || `<tr><td colspan="3" class="empty">No resolved calls yet.</td></tr>`;
+}
+
+// Ingest strip -- last ingest time (relative), total draws ingested,
+// ported from the older build's identically-named strip. Relative-time
+// helper mirrors that build's formatting exactly (Xs ago / Xm ago).
+function relativeTime(isoStr){
+  if(!isoStr) return 'No draws yet';
+  const secondsAgo = Math.max(0, Math.round((Date.now() - new Date(isoStr).getTime()) / 1000));
+  return secondsAgo < 60 ? `${secondsAgo}s ago` : `${Math.round(secondsAgo / 60)}m ago`;
+}
+
+// This backend's GET /api/v1/snapshot has no ingestStats object -- ingest
+// info lives on snapshot.pipeline instead (see src/routes/timingApi.js
+// buildFullCycle(): { status, drawCount, lastDrawId, lastReceived,
+// lastProcessed, lagMs }). drawCount is the running total of ingested
+// draws (historicalDraws.length) and lastReceived is the ISO timestamp
+// of the last accepted draw -- the same two facts the strip shows, just
+// under different field names than the older build this strip was
+// ported from.
+function renderIngestStrip(snapshot){
+  const pipeline = snapshot.pipeline || {};
+  const totalDrawsText = pipeline.drawCount != null ? pipeline.drawCount : '--';
+  const lastTimeText = relativeTime(pipeline.lastReceived);
+  const lastTimeEl = document.getElementById('ingestLastTime');
+  if(lastTimeEl) lastTimeEl.innerText = lastTimeText;
+  const totalEl = document.getElementById('ingestTotalDraws');
+  if(totalEl) totalEl.innerText = totalDrawsText;
+}
+
+// Ingest strip's "API Health" reading -- calls the dedicated /api/health
+// endpoint rather than inferring health from refresh()'s own
+// success/failure, same rationale as the older build: it's the actual
+// health-check contract, not a proxy. This backend's /api/health (and
+// snapshot.apiHealth) report status:'HEALTHY', not the older build's
+// status:'ok' -- see src/routes/timingApi.js and server.js.
+async function fetchApiHealth(){
+  const ledEl = document.getElementById('ingestApiHealthLed');
+  const textEl = document.getElementById('ingestApiHealthText');
+  if(!ledEl || !textEl) return;
+  try{
+    const res = await fetch('/api/health');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const health = await res.json();
+    const ok = health.status === 'HEALTHY';
+    ledEl.className = ok ? 'led-dot' : 'led-dot yellow';
+    textEl.innerText = ok ? 'OK' : (health.status || 'DEGRADED').toUpperCase();
+  }catch(e){
+    ledEl.className = 'led-dot red';
+    textEl.innerText = 'UNREACHABLE';
+  }
+}
+
+function renderStatusBar(snapshot){
+  const p = snapshot.pipeline || {};
+  const dataDot = document.getElementById('dataDot');
+  dataDot.className = 'dot ' + (p.status==='LIVE'?'live':(p.status==='STALE'?'stale':'offline'));
+  document.getElementById('dataLabel').textContent = 'DATA ' + (p.status||'OFFLINE');
+  document.getElementById('drawId').textContent = p.lastDrawId ?? '--';
+  document.getElementById('lastReceived').textContent = fmtTime(p.lastReceived);
+  document.getElementById('pulseDot').className = 'pulse' + (p.status==='LIVE' ? '' : ' dim');
+  document.getElementById('apiDot').className = 'dot ' + ((snapshot.apiHealth && snapshot.apiHealth.status==='HEALTHY') ? 'live' : 'offline');
+}
+
+async function refresh(){
+  try{
+    const res = await fetch('/api/v1/snapshot');
+    const snapshot = await res.json();
+    renderStatusBar(snapshot);
+    renderIngestStrip(snapshot);
+    renderHero(snapshot.timing || {});
+    renderGates(snapshot.gateSummary || {gates:[],confirmed:0,required:0,confidence:0,confidenceRequired:0,verdict:'NO SIGNAL'});
+    renderPaperTrader(snapshot.paperTrader || {});
+    renderPaperTraderTrades(snapshot.paperTrader && snapshot.paperTrader.trades);
+    renderPaperTraderStages(snapshot.paperTrader || {});
+    populatePaperTraderSettings(snapshot.paperTrader || {});
+    renderNEI(snapshot.nei || null);
+  }catch(e){
+    console.error('snapshot refresh failed', e);
+    document.getElementById('apiDot').className = 'dot offline';
+  }
+  try{
+    const [callsRes, evalRes] = await Promise.all([
+      fetch('/api/v1/calls?limit=50'), fetch('/api/v1/evaluation')
+    ]);
+    const callsData = await callsRes.json();
+    const evalData = await evalRes.json();
+    renderCalls(callsData.calls);
+    renderEvaluation(evalData);
+  }catch(e){ console.error('calls/evaluation refresh failed', e); }
+}
+
+refresh();
+setInterval(refresh, 6000);
+fetchApiHealth();
+setInterval(fetchApiHealth, 15000);
+</script>
+
+<div class="rgb-bottom-strip"></div>
+
+</body>
+</html>
