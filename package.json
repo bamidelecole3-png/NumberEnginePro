@@ -1,0 +1,17 @@
+{
+  "name": "number-engine-pro",
+  "version": "20.0.0",
+  "description": "Number Engine Pro v20 CAME — lottery draw analytics dashboard with Signal Cluster Intelligence Engine (SCIE), Correlation-Aware Meta Engine (CAME), and Top4 Live Reality audit engine",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

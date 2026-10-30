@@ -1,0 +1,20 @@
+PORT=3000
+# Ingest/clear protection for the 49JA data gateway (leave empty only for local dev)
+GATEWAY_API_KEY=
+# Bet Slip Assistant feed (GET /api/v1/slip/latest, POST /api/v1/slip/refresh). A SEPARATE key: it can only read the slip.
+# Feed is OFF until this is set. Paste the same value into the extension popup.
+SLIP_API_KEY=
+# Optional durable draw storage (Render's disk is ephemeral)
+JSONBIN_API_KEY=
+JSONBIN_BIN_ID=
+
+# Telegram timed-access signal channel (OFF until token + channel are set)
+TELEGRAM_BOT_TOKEN=
+# Private channel id, e.g. -1001234567890 (bot must be an admin with invite + ban rights)
+TELEGRAM_CHANNEL_ID=
+# Your Telegram user id(s), comma-separated: only these can use /gen /codes /members /revoke /extend /kick
+TELEGRAM_ADMIN_IDS=
+# Optional: second JSONBin bin (create an empty one with {"codes":{}}) so codes/expiries survive Render redeploys
+TG_JSONBIN_BIN_ID=
+# Skip channel post when one ingest adds more than this many draws (bulk imports)
+TG_BULK_SKIP=5

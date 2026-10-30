@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Number Engine Pro · v20 (SCIE + CAME)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#04050d; --bg-soft:#080a14; --surface:#0e1120; --card:#111523; --card2:#161c2e;
+  --border:#1e2438; --border-soft:#181e2e; --border-hi:#2a3250;
+
+  --text:#f0f3ff; --text-dim:#8894b8; --text-faint:#4d5a7a;
+
+  --red:#ff1a3c;   --red-bg:#1f0008;   --red-line:#4a0015;   --red-glow:rgba(255,26,60,0.65);
+  --green:#00ff88; --green-bg:#001f10; --green-line:#004025;  --green-glow:rgba(0,255,136,0.6);
+  --blue:#1a8fff;  --blue-bg:#001530;  --blue-line:#003070;   --blue-glow:rgba(26,143,255,0.65);
+  --gold:#ffe800;  --gold-bg:#1a1600;  --gold-line:#3d3300;   --gold-glow:rgba(255,232,0,0.6);
+  --purple:#aa00ff;--purple-bg:#1a0030;--purple-glow:rgba(170,0,255,0.6);
+
+  --radius:16px; --radius-sm:10px; --radius-pill:999px;
+  --shadow:0 8px 32px -6px rgba(0,0,0,.65);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{-webkit-text-size-adjust:100%;}
+body{
+  background-color:var(--bg);
+  background-image:
+    radial-gradient(ellipse 55% 40% at 8% 2%,  rgba(26,100,255,.18), transparent),
+    radial-gradient(ellipse 50% 35% at 94% 4%,  rgba(140,30,255,.18), transparent),
+    radial-gradient(ellipse 35% 25% at 0% 55%,  rgba(255,20,60,.10),  transparent),
+    radial-gradient(ellipse 30% 25% at 100% 52%, rgba(0,220,120,.09), transparent);
+  background-attachment:fixed;
+  color:var(--text); font-family:'Inter',system-ui,sans-serif; min-height:100vh; padding-bottom:50px;
+  -webkit-font-smoothing:antialiased;
+}
+.display{font-family:'Space Grotesk',sans-serif; letter-spacing:-.01em;}
+.mono{font-family:'JetBrains Mono',monospace;}
+a{color:inherit;}
+
+header{
+  position:sticky; top:0; z-index:50;
+  background:rgba(4,5,13,.9); backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border-soft);
+}
+.head-row{max-width:1120px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:11px;}
+.brand-mark{
+  width:42px;height:42px;border-radius:12px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--red) 0%,var(--green) 50%,var(--blue) 100%);
+  display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#0a0c10;
+  font-family:'Space Grotesk',sans-serif; box-shadow:0 0 20px rgba(26,143,255,.4);
+}
+.brand h1{
+  font-size:1.1rem; font-weight:800;
+  background:linear-gradient(90deg, var(--blue), #a040ff, var(--red), var(--green));
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.brand p{font-size:.7rem; color:var(--text-faint); margin-top:1px;}
+
+.pulse-pill{
+  display:inline-flex; align-items:center; gap:8px; font-size:.75rem; font-weight:600;
+  padding:6px 14px; border-radius:var(--radius-pill); background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
+}
+.pulse-dot{width:8px;height:8px;border-radius:50%; background:var(--text-faint); flex-shrink:0;}
+.pulse-pill.online .pulse-dot{
+  background:var(--green);
+  box-shadow:0 0 10px var(--green);
+  animation: pulse-glow 1.8s infinite;
+}
+@keyframes pulse-glow { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:0.4; transform:scale(1.2); } }
+.pulse-pill.online{color:var(--green); border-color:rgba(0,255,136,.3);}
+
+nav.tabs{max-width:1120px; margin:0 auto; display:flex; gap:4px; padding:0 18px; background:var(--card); border-bottom:1px solid var(--border); overflow-x:auto;}
+.tab{padding:12px 18px; font-size:.82rem; font-weight:600; cursor:pointer; border:none; background:none; color:var(--text-faint); border-bottom:2px solid transparent; margin-bottom:-1px; white-space:nowrap;}
+.tab.active{color:var(--text); border-bottom-color:var(--blue);}
+.tab:hover:not(.active){color:var(--text-dim);}
+
+.wrap{max-width:1120px; margin:0 auto; padding:20px 16px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+.card::before{
+  content:''; position:absolute; inset:0 0 auto 0; height:2px;
+  background:linear-gradient(90deg, var(--blue), var(--purple), var(--red), var(--green));
+}
+.card-lbl{font-size:.64rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px;}
+.card-title{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1.1rem; margin-bottom:4px;}
+.flex-row{display:flex; gap:10px; flex-wrap:wrap;}
+.muted{color:var(--text-faint); font-size:.8rem; line-height:1.5;}
+
+.btn{padding:10px 20px; border-radius:var(--radius-pill); font-size:.82rem; font-weight:700; cursor:pointer; border:none; transition:transform .1s ease;}
+.btn:active{transform:scale(.96);}
+.btn-pri{background:var(--text); color:#0a0c10;}
+.btn-ghost{background:transparent; color:var(--text-dim); border:1px solid var(--border);}
+.btn-danger{background:var(--red-bg); color:var(--red); border:1px solid var(--red-line);}
+
+.tile-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:14px;}
+.tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px;}
+.tile .tl{font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint);}
+.tile .tv{font-family:'JetBrains Mono',monospace; font-size:1.5rem; font-weight:700; margin-top:5px; line-height:1;}
+.tile .ts{font-size:.68rem; color:var(--text-faint); margin-top:4px;}
+
+.bar-bg{height:6px; border-radius:4px; background:var(--border-soft); overflow:hidden;}
+.bar-fill{height:100%; border-radius:4px; transition:width .5s ease;}
+
+.badge{font-size:.66rem; font-weight:700; padding:4px 10px; border-radius:var(--radius-pill); display:inline-flex; align-items:center; gap:5px;}
+.badge-purple{background:var(--purple-bg); color:var(--purple); border:1px solid var(--purple-glow);}
+.badge-green{background:var(--green-bg); color:var(--green); border:1px solid var(--green-line);}
+.badge-gold{background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold-line);}
+.badge-red{background:var(--red-bg); color:var(--red); border:1px solid var(--red-line);}
+.badge-faint{background:var(--surface); color:var(--text-faint); border:1px solid var(--border);}
+
+.ball{
+  width:44px;height:44px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800; font-size:.95rem; flex-shrink:0;
+  font-family:'JetBrains Mono',monospace; position:relative;
+  background:radial-gradient(circle at 33% 28%, #252d50, #0c0f1e);
+  box-shadow:0 3px 10px rgba(0,0,0,.5); color:var(--text);
+}
+.ball.red{ background:radial-gradient(circle at 34% 29%, #ff5570, #e0002a, #6e0012); box-shadow:0 0 16px var(--red-glow); color:#fff; }
+.ball.green{ background:radial-gradient(circle at 34% 29%, #40ffaa, #00cc66, #003e20); box-shadow:0 0 16px var(--green-glow); color:#fff; }
+.ball.blue{ background:radial-gradient(circle at 34% 29%, #55aaff, #006eee, #001f70); box-shadow:0 0 16px var(--blue-glow); color:#fff; }
+.ball.gold{ background:radial-gradient(circle at 34% 29%, #fff066, #ffcc00, #553300); box-shadow:0 0 16px var(--gold-glow); color:#1a0f00; }
+.ball.sm{width:32px;height:32px;font-size:.74rem;}
+.ball.lg{width:56px;height:56px;font-size:1.15rem;}
+
+.scie-signal-card{
+  background:var(--card2); border:1px solid var(--border-hi); border-radius:14px; padding:14px; margin-bottom:10px;
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+}
+.scie-pair{display:flex; align-items:center; gap:8px; font-weight:800; font-size:1.1rem; font-family:'JetBrains Mono',monospace;}
+
+.ondemand-bar-inner{
+  background:linear-gradient(135deg, var(--card), var(--card2));
+  border:1px solid var(--border); border-radius:16px; padding:14px 18px;
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:16px;
+}
+.btn-consolidated{
+  background:linear-gradient(90deg,var(--red),var(--gold),var(--green),var(--blue));
+  color:#0a0c10; padding:12px 24px; border-radius:var(--radius-pill); font-weight:800; border:none; cursor:pointer; font-family:'Space Grotesk',sans-serif;
+}
+table.tx-perf-table{width:100%;border-collapse:collapse;font-size:.78rem;}
+table.tx-perf-table th{text-align:left; font-size:.62rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-faint); padding:10px 12px; border-bottom:1px solid var(--border-soft);}
+table.tx-perf-table td{padding:10px 12px; border-bottom:1px solid var(--border-soft); vertical-align:middle;}
+.outcome-tag{font-size:.66rem; font-weight:700; padding:4px 10px; border-radius:var(--radius-pill);}
+.outcome-tag.win{background:var(--green-bg); color:var(--green); border:1px solid var(--green-line);}
+.outcome-tag.loss{background:var(--red-bg); color:var(--red); border:1px solid var(--red-line);}
+
+textarea{width:100%; background:var(--bg-soft); border:1px solid var(--border); border-radius:10px; color:var(--text); font-size:.82rem; padding:13px; font-family:'JetBrains Mono',monospace;}
+
+/* ── TOP 4 LIVE REALITY ENGINE ─────────────────────────────────────────── */
+.reality-hero{display:flex; align-items:center; gap:22px; flex-wrap:wrap; margin-bottom:14px;}
+.reality-ring{
+  width:112px; height:112px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; position:relative;
+  background:conic-gradient(var(--ring-color, var(--blue)) calc(var(--ring-pct,0) * 1%), var(--border-soft) 0);
+}
+.reality-ring::before{content:''; position:absolute; inset:9px; border-radius:50%; background:var(--card);}
+.reality-ring .rv{position:relative; text-align:center; font-family:'JetBrains Mono',monospace;}
+.reality-ring .rv b{font-size:1.5rem; display:block; line-height:1;}
+.reality-ring .rv span{font-size:.6rem; color:var(--text-faint); letter-spacing:.06em; text-transform:uppercase;}
+.reality-cond-row{display:flex; align-items:center; gap:8px; margin-top:6px;}
+.reality-dot{width:9px;height:9px;border-radius:50%; flex-shrink:0;}
+.reality-dot.healthy{background:var(--green); box-shadow:0 0 8px var(--green);}
+.reality-dot.normal{background:var(--blue); box-shadow:0 0 8px var(--blue);}
+.reality-dot.caution{background:var(--gold); box-shadow:0 0 8px var(--gold);}
+.reality-dot.drought{background:var(--red); box-shadow:0 0 8px var(--red);}
+.reality-dot.recovering{background:var(--gold); box-shadow:0 0 8px var(--gold); animation:pulse-glow 1.4s infinite;}
+.reality-dot.early{background:var(--text-faint);}
+.metric-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:10px; margin-top:14px;}
+.metric-cell{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 12px;}
+.metric-cell .ml{font-size:.6rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--text-faint);}
+.metric-cell .mv{font-family:'JetBrains Mono',monospace; font-size:1.05rem; font-weight:700; margin-top:3px;}
+.trend-bars{display:flex; align-items:flex-end; gap:3px; height:36px; margin-top:8px;}
+.trend-bars .tb{flex:1; min-width:4px; border-radius:2px 2px 0 0; background:var(--blue);}
+.reality-log-entry{background:var(--card2); border:1px solid var(--border-hi); border-radius:14px; padding:14px; margin-bottom:10px;}
+.reality-log-head{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;}
+.reality-offsets{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0;}
+.reality-offset{background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:6px 10px; font-size:.72rem; font-family:'JetBrains Mono',monospace;}
+.reality-offset.hit{border-color:var(--green-line); color:var(--green);}
+.reality-offset.miss{color:var(--text-faint);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+    <div class="brand">
+      <div class="brand-mark">49</div>
+      <div>
+        <h1 class="display">Number Engine Pro</h1>
+        <p>v20 · SCIE + Correlation-Aware Meta Engine (CAME)</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span class="pulse-pill" id="pulsePill"><span class="pulse-dot"></span><span id="pulseText">Connecting…</span></span>
+      <span class="muted" style="font-size:0.7rem;">Auto-refresh: <b style="color:var(--text)" id="refreshTimer">25s</b></span>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="predict">Score Breakdown</button>
+    <button class="tab" data-tab="history">Draw Management</button>
+    <button class="tab" data-tab="performance">🧠 Intelligence Center</button>
+  </nav>
+</header>
+
+<div class="wrap">
+  <div class="ondemand-bar-inner">
+    <div>
+      <b style="color:var(--text);font-size:.85rem">⚡ Consolidated On-Demand Prediction</b>
+      <div class="muted">Instant score generation synthesized across all 15 adaptive layers & SCIE queues.</div>
+    </div>
+    <button class="btn-consolidated" id="btnConsolidated">⚡ Run Engine v20</button>
+  </div>
+  <div id="consolidatedResult"></div>
+
+  <!-- DASHBOARD PANEL -->
+  <div class="panel active" id="p-dashboard">
+    <!-- SCIE WIDGET CARD -->
+    <div class="card" style="border: 1px solid var(--purple-glow);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title" style="display:flex;align-items:center;gap:8px">
+            <span>⚡ Signal Cluster Intelligence Engine (SCIE)</span>
+            <span class="badge badge-purple" id="scieDiscoveryBadge">Discovery Mode: —</span>
+          </div>
+          <div class="muted">Live active cluster signals targeting historical successor numbers over a 6-draw window.</div>
+        </div>
+        <div id="scieSummaryBadges"></div>
+      </div>
+
+      <div class="tile-grid" id="scieTiles"></div>
+      <div class="card-lbl">Active Live Signals Queue</div>
+      <div id="scieQueueList"></div>
+
+      <div class="card-lbl" style="margin-top:16px">Cluster Chains (multi-hop signals)</div>
+      <div id="scieChainList"></div>
+
+      <div class="card-lbl" style="margin-top:16px">Newly Discovered Clusters — Pending Review</div>
+      <div class="muted" style="margin-bottom:8px">Reliability ≥ threshold from overnight history scans. Not yet part of the seeded cluster database — review before promoting.</div>
+      <div id="scieDiscoveredList"></div>
+
+      <div class="card-lbl" style="margin-top:16px">Conflict Resolution Log</div>
+      <div class="muted" style="margin-bottom:8px">Targets where a majority of other engines actively rejected a cluster signal, so its score was penalized.</div>
+      <div id="scieConflictList"></div>
+    </div>
+
+    <!-- META DECISION BRAIN & ADAPTIVE DIAGNOSTICS -->
+    <div id="ndMetaArea"></div>
+    <div id="ndAdaptiveArea"></div>
+
+    <!-- TOP PREDICTIONS CARD -->
+    <div class="card">
+      <div class="card-title">Top Predicted Numbers (Ensemble Output)</div>
+      <div class="muted" style="margin-bottom:14px">15-layer adaptive ensemble combining SCIE, Markov, Momentum, Frequency, and Survivor gap scores.</div>
+      <div class="flex-row" id="ndTop4" style="justify-content:space-around"></div>
+    </div>
+
+    <!-- TOP 4 LIVE REALITY ENGINE — independent autonomous audit card,
+         placed beside the existing Top 4 prediction, never inside it
+         (spec §29-30: the Reality Top 4 itself is intentionally never
+         shown in this hero card — only rate/condition/coverage/progress). -->
+    <div id="realityCardArea"></div>
+    <div id="realityLogArea"></div>
+
+    <!-- 5-DRAW PERFORMANCE & ARCHIVE -->
+    <div class="card">
+      <div class="card-title">📊 5-Draw Batch Performance Log</div>
+      <div class="muted" style="margin-bottom:12px">Frequency profile & hit metrics per 5-draw batch window.</div>
+      <div style="overflow-x:auto">
+        <table class="tx-perf-table" id="table5Perf">
+          <thead>
+            <tr><th>Batch Window</th><th>Top 4 Predictions</th><th>Played Frequencies</th><th style="text-align:center">Total Hits</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🏆 Tracked Win/Loss Batch Archive</div>
+      <div class="muted" style="margin-bottom:12px">Tracked 5-draw batch win/loss record.</div>
+      <div style="overflow-x:auto">
+        <table class="tx-perf-table" id="tableArchive">
+          <thead>
+            <tr><th>Batch</th><th>Evaluated</th><th>Predicted</th><th style="text-align:center">Hits</th><th style="text-align:center">Result</th><th style="text-align:center">Conf.</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORE BREAKDOWN PANEL -->
+  <div class="panel" id="p-predict">
+    <div class="card">
+      <div class="card-title">Dynamic Layer Breakdown</div>
+      <div class="muted" style="margin-bottom:14px">Layer scores (0-100) per candidate number.</div>
+      <div id="predictBreakdown"></div>
+    </div>
+  </div>
+
+  <!-- DRAW MANAGEMENT PANEL -->
+  <div class="panel" id="p-history">
+    <div class="card">
+      <div class="card-title">Ingest Draws</div>
+      <div class="muted" style="margin-bottom:10px">Paste 6-number draws (1-49), one per line. Connects to `/api/v1/collector` pipeline.</div>
+      <textarea id="pasteBox" rows="5" placeholder="4 18 31 42 46 48&#10;7 11 22 30 33 45"></textarea>
+      <div id="pasteErr" class="muted" style="color:var(--red);display:none;margin-top:6px"></div>
+      <div class="flex-row" style="margin-top:10px">
+        <button class="btn btn-pri" id="btnPaste">Ingest Draws</button>
+        <button class="btn btn-danger" id="btnClear">Clear All Data</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Stored Draws</div>
+      <div id="drawsList"></div>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE CENTER PANEL -->
+  <div class="panel" id="p-performance">
+    <!-- v19 — Pattern Climate + Opportunity Window -->
+    <div id="v19ClimateArea"></div>
+    <!-- v19 — Group Intelligence Engine -->
+    <div id="v19GroupIntelArea"></div>
+    <!-- v19 — Explainability Engine -->
+    <div id="v19ExplainArea"></div>
+    <!-- v19 — Enhanced Engine Health Monitor -->
+    <div id="v19HealthArea"></div>
+    <div id="intelligenceReportArea"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+let activeTab = 'dashboard';
+let timerSeconds = 25;
+
+function ballColor(n){
+  if (n===49) return 'gold';
+  const REDS = new Set([1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46]);
+  const GREENS = new Set([3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48]);
+  if (REDS.has(n)) return 'red';
+  if (GREENS.has(n)) return 'green';
+  return 'blue';
+}
+
+function ballHtml(n, sz=''){ return `<div class="ball ${ballColor(n)} ${sz}">${n}</div>`; }
+function esc(v){ return String(v||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// v19 — shared badge-color mapping for every new status/level label the
+// Pattern Climate / Opportunity Window / Group Intelligence / Explainability
+// / Health Monitor modules can return.
+function levelBadgeClass(label){
+  return ({
+    HIGH:'badge-green', MODERATE:'badge-gold', LOW:'badge-red', WAIT:'badge-red',
+    STABLE:'badge-green', CHAOTIC:'badge-red',
+    ACTIVE:'badge-green', EMERGING:'badge-gold', RETIRED:'badge-faint',
+    HEALTHY:'badge-green', LEARNING:'badge-gold', CALIBRATING:'badge-gold', MATURE:'badge-green',
+    VOLATILE:'badge-red', DEGRADED:'badge-red', UNTRAINED:'badge-faint', EARLY_LEARNING:'badge-gold',
+    IMPROVING:'badge-green', DECLINING:'badge-red', STABLE_TREND:'badge-faint',
+    RISING:'badge-green', FALLING:'badge-red', FLAT:'badge-faint',
+    INSUFFICIENT_DATA:'badge-faint', UNKNOWN:'badge-faint'
+  })[label] || 'badge-faint';
+}
+
+async function api(url, opts){
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ── Tab Navigation ──────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    activeTab = b.dataset.tab;
+    $('p-' + activeTab).classList.add('active');
+    refreshUI();
+  });
+});
+
+// ── Status Poll & Header Pulse ──────────────────────────────────────────
+async function updateStatus(){
+  try {
+    const s = await api('/api/status');
+    const pill = $('pulsePill');
+    pill.classList.add('online');
+    $('pulseText').textContent = `Gateway Connected · ${s.drawCount} draws (last: ${s.lastIngestAt ? new Date(s.lastIngestAt).toLocaleTimeString() : 'none'})`;
+  } catch (e) {
+    $('pulsePill').classList.remove('online');
+    $('pulseText').textContent = 'Gateway Offline';
+  }
+}
+
+// ── Render Dashboard UI ──────────────────────────────────────────────────
+async function renderDashboard(){
+  const [pred, scie, meta, perf5, archive, status, came] = await Promise.all([
+    api('/api/number/predict?size=4'),
+    api('/api/number/scie'),
+    api('/api/meta/decision'),
+    api('/api/number/ladder-performance-5'),
+    api('/api/number/archive'),
+    api('/api/status'),
+    api('/api/number/came')
+  ]);
+
+  // SCIE Widget
+  $('scieDiscoveryBadge').textContent = `Discovery Mode: ${scie.discoveryMode || '—'}`;
+
+  $('scieSummaryBadges').innerHTML = `
+    <span class="badge badge-green">Cluster Confidence: ${esc(scie.clusterConfidence)}</span>
+    <span class="badge badge-gold">Active Signals: ${scie.activeSignals.length}</span>
+  `;
+
+  $('scieTiles').innerHTML = `
+    <div class="tile"><div class="tl">Active Signals</div><div class="tv" style="color:var(--purple)">${scie.activeSignals.length}</div></div>
+    <div class="tile"><div class="tl">Cluster Confidence</div><div class="tv" style="color:var(--green)">${esc(scie.clusterConfidence)}</div></div>
+    <div class="tile"><div class="tl">Cluster Chains</div><div class="tv" style="color:var(--blue)">${scie.clusterChains.length}</div></div>
+    <div class="tile"><div class="tl">Discovered Pairs</div><div class="tv" style="color:var(--gold)">${scie.discoveredClusters.length}</div></div>
+  `;
+
+  $('scieQueueList').innerHTML = scie.activeSignals.length ? scie.activeSignals.slice(0, 5).map(sig => `
+    <div class="scie-signal-card">
+      <div class="scie-pair">
+        ${ballHtml(sig.trigger, 'sm')}
+        <span style="color:var(--text-faint)">→</span>
+        ${ballHtml(sig.target, 'sm')}
+      </div>
+      <div>
+        <span class="badge badge-purple">${esc(sig.clusterKey)}</span>
+        <span class="muted">Age: ${sig.age} draw${sig.age===1?'':'s'}</span>
+      </div>
+      <div class="mono" style="font-size:.8rem;color:var(--green)">
+        Reliability: ${sig.reliability}% · Avg Delay: ${sig.avgDelay}
+      </div>
+      <div class="mono" style="font-weight:700;color:var(--purple)">
+        Score: ${sig.confidence}%
+      </div>
+    </div>
+  `).join('') : `<div class="muted">No active cluster signals detected in recent draws.</div>`;
+
+  // Step 8 — Cluster Chains: show the actual multi-hop chain path and
+  // strength, not just a count tile.
+  $('scieChainList').innerHTML = scie.clusterChains.length ? scie.clusterChains.map(ch => `
+    <div class="scie-signal-card">
+      <div class="scie-pair mono">${esc(ch.chain)}</div>
+      <div class="mono" style="font-weight:700;color:var(--blue)">Strength: ${ch.confidence}%</div>
+    </div>
+  `).join('') : `<div class="muted">No multi-hop chains detected in the current signal queue.</div>`;
+
+  // Step 9 — Dynamic Discovery: surface newly discovered high-reliability
+  // clusters for human review, per blueprint ("keeps human oversight while
+  // allowing the engine to evolve"). Informational only — no auto-promotion
+  // into the seeded cluster database.
+  $('scieDiscoveredList').innerHTML = scie.discoveredClusters.length ? scie.discoveredClusters.map(dc => `
+    <div class="scie-signal-card">
+      <div class="scie-pair">
+        ${ballHtml(dc.trigger, 'sm')}
+        <span style="color:var(--text-faint)">→</span>
+        ${ballHtml(dc.target, 'sm')}
+      </div>
+      <div class="mono" style="font-size:.8rem;color:var(--green)">
+        Reliability: ${dc.reliability}% · Observed: ${dc.observed}× · Avg Delay: ${dc.avgDelay}
+      </div>
+      <span class="badge badge-gold">Suggested — not yet in seed database</span>
+    </div>
+  `).join('') : `<div class="muted">No new clusters have crossed the discovery reliability threshold yet.</div>`;
+
+  // Step 10 — Conflict Resolution log: show which targets were penalized
+  // and why, rather than applying the penalty server-side only and never
+  // surfacing it.
+  $('scieConflictList').innerHTML = (scie.conflicts && scie.conflicts.length) ? scie.conflicts.map(c => `
+    <div class="scie-signal-card">
+      <div class="scie-pair">${ballHtml(c.target, 'sm')} <span class="muted">from signal ${esc(String(c.trigger))}→${esc(String(c.target))}</span></div>
+      <div class="mono" style="font-size:.8rem;color:var(--text-faint)">
+        Rejected by ${c.rejectingLayers}/${c.totalLayers} other engines
+      </div>
+      <div class="mono" style="font-weight:700;color:#e06666">
+        Score ${c.scoreBefore} → ${c.scoreAfter} (penalized)
+      </div>
+    </div>
+  `).join('') : `<div class="muted">No conflicts this cycle — no other engine strongly rejected an active signal's target.</div>`;
+
+  // Meta & Adaptive
+  $('ndMetaArea').innerHTML = `
+    <div class="card">
+      <div class="card-title">🧭 Meta Decision Brain (v20)</div>
+      <div class="muted" style="margin-bottom:10px">${esc(meta.explanation)}</div>
+      <div class="tile-grid">
+        <div class="tile"><div class="tl">Recommendation</div><div class="tv" style="color:var(--green)">${esc(meta.recommendation)}</div></div>
+        <div class="tile"><div class="tl">Agreement</div><div class="tv">${meta.agreement != null ? meta.agreement + '%' : 'N/A'}</div></div>
+        <div class="tile"><div class="tl">Combined Confidence</div><div class="tv">${meta.combinedConfidence != null ? meta.combinedConfidence + '%' : 'N/A'}</div></div>
+      </div>
+    </div>
+  `;
+
+  // v20 — Correlation-Aware Meta Engine (CAME) diagnostics widget.
+  // Shows per-layer Brier calibration + weight + correlation discount,
+  // redundancy warnings (layers moving together closely enough that their
+  // combined vote is being discounted), and an "Effective Independence"
+  // score (0-6) summarizing how much of the 6-layer ensemble is adding
+  // genuinely distinct information vs. repeating a shared signal.
+  const cameRows = (came.layerCalibration || []).map(l => {
+    const discounted = l.discount < 0.97;
+    return `
+      <tr>
+        <td class="mono" style="text-transform:uppercase;font-size:.72rem;font-weight:700">${esc(l.layer)}</td>
+        <td class="mono">${l.batchBrier.toFixed(3)}</td>
+        <td class="mono" style="color:var(--green);font-weight:700">${Math.round(l.weight * 100)}%</td>
+        <td>
+          ${discounted
+            ? `<span class="badge" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-line)">⚠ discounted ×${l.discount.toFixed(2)}</span>`
+            : `<span class="muted" style="font-size:.72rem">full weight</span>`}
+        </td>
+        <td class="mono" style="text-align:center;color:var(--text-faint)">${l.sampleSize}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const redundancyList = (came.redundancyWarnings && came.redundancyWarnings.length)
+    ? came.redundancyWarnings.map(w => `
+      <div class="scie-signal-card">
+        <div style="font-weight:700;text-transform:uppercase;font-size:.78rem">${esc(w.layers.join(' ↔ '))}</div>
+        <div class="mono" style="font-size:.8rem;color:var(--red)">Correlation: ${(w.correlation * 100).toFixed(0)}% · ${w.batchesObserved} consecutive batches</div>
+        <div class="muted" style="flex-basis:100%">${esc(w.suggestion)}</div>
+      </div>
+    `).join('')
+    : `<div class="muted">No sustained layer redundancy detected — no two layers have stayed above 75% correlation for 5+ consecutive batches.</div>`;
+
+  $('ndAdaptiveArea').innerHTML = `
+    <div class="card" style="border: 1px solid var(--blue-glow);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div class="card-title">🧬 Correlation-Aware Meta Engine (CAME)</div>
+          <div class="muted">Brier-scored layer calibration + pairwise correlation discounting — replaces the old vote-threshold weight learning.</div>
+        </div>
+        <span class="badge badge-purple">Status: ${esc(came.status || 'ACTIVE')}</span>
+      </div>
+
+      <div class="tile-grid">
+        <div class="tile">
+          <div class="tl">Effective Independence</div>
+          <div class="tv" style="color:var(--blue)">${came.effectiveIndependence != null ? came.effectiveIndependence.toFixed(1) : '—'} / ${came.maxEffectiveIndependence || 7}</div>
+          <div class="ts">How much of the ensemble is adding distinct information</div>
+        </div>
+        <div class="tile">
+          <div class="tl">Redundancy Warnings</div>
+          <div class="tv" style="color:${(came.redundancyWarnings||[]).length ? 'var(--red)' : 'var(--green)'}">${(came.redundancyWarnings||[]).length}</div>
+          <div class="ts">Layer pairs correlated ≥75% for 5+ batches</div>
+        </div>
+      </div>
+
+      <div class="card-lbl">Layer Calibration (lower Brier = better)</div>
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table class="tx-perf-table">
+          <thead>
+            <tr><th>Layer</th><th>Brier</th><th>Weight</th><th>Discount</th><th style="text-align:center">Batches</th></tr>
+          </thead>
+          <tbody>${cameRows || `<tr><td colspan="5" class="muted">No completed batches yet — weights are still at their default split.</td></tr>`}</tbody>
+        </table>
+      </div>
+
+      <div class="card-lbl">Redundancy Warnings</div>
+      <div class="muted" style="margin-bottom:8px">Surfaced for human review — CAME discounts correlated layers automatically, but merging/re-deriving a layer is a manual decision.</div>
+      ${redundancyList}
+
+      <div class="card-lbl" style="margin-top:16px">Consensus Calibration</div>
+      <div class="muted" style="margin-bottom:8px">Is engine agreement itself trustworthy? CAME separately tracks the composite prediction's accuracy when layers agree (high consensus) vs. when they're split, and tempers overallConfidence downward when agreement has NOT historically been reliable for this system.</div>
+      ${(() => {
+        const cc = came.consensusCalibration;
+        if (!cc) return `<div class="muted">No consensus data yet.</div>`;
+        const edgeKnown = cc.consensusEdge != null;
+        const edgeColor = !edgeKnown ? 'var(--text-faint)' : cc.consensusEdge > 0.01 ? 'var(--green)' : cc.consensusEdge < -0.01 ? 'var(--red)' : 'var(--text-dim)';
+        return `
+          <div class="tile-grid" style="margin-bottom:10px">
+            <div class="tile">
+              <div class="tl">High Consensus Brier</div>
+              <div class="tv">${cc.highConsensus.brier.toFixed(3)}</div>
+              <div class="ts">${cc.highConsensus.sampleSize} batch${cc.highConsensus.sampleSize===1?'':'es'} scored</div>
+            </div>
+            <div class="tile">
+              <div class="tl">Low Consensus Brier</div>
+              <div class="tv">${cc.lowConsensus.brier.toFixed(3)}</div>
+              <div class="ts">${cc.lowConsensus.sampleSize} batch${cc.lowConsensus.sampleSize===1?'':'es'} scored</div>
+            </div>
+            <div class="tile">
+              <div class="tl">Consensus Edge</div>
+              <div class="tv" style="color:${edgeColor}">${edgeKnown ? cc.consensusEdge.toFixed(3) : '—'}</div>
+              <div class="ts">Positive = agreement is trustworthy signal</div>
+            </div>
+          </div>
+          <div class="muted" style="margin-bottom:8px">${esc(cc.interpretation)}</div>
+          ${cc.lastBatch ? `
+            <div class="scie-signal-card">
+              <div style="font-weight:700;text-transform:uppercase;font-size:.72rem">Last Graded Batch</div>
+              <div class="mono" style="font-size:.8rem">
+                ${cc.lastBatch.isHighConsensus ? 'HIGH' : 'LOW'} consensus · ${cc.lastBatch.agreementCount}/${came.maxEffectiveIndependence || 7} layers agreed · Composite Brier ${cc.lastBatch.compositeBrier.toFixed(3)}
+              </div>
+            </div>
+          ` : ''}
+        `;
+      })()}
+    </div>
+  `;
+
+  // Top Predictions
+  if (pred.numberDetails) {
+    $('ndTop4').innerHTML = pred.numberDetails.map(c => `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        ${ballHtml(c.num, 'lg')}
+        <span class="mono" style="font-weight:700;color:var(--green)">${c.individualConfidence}%</span>
+        <span class="muted" style="font-size:.68rem">${esc(c.momentumClass)}</span>
+      </div>
+    `).join('');
+  } else {
+    $('ndTop4').innerHTML = `<div class="muted">${esc(pred.error || 'Not enough draws yet.')}</div>`;
+  }
+
+  // 5-Draw Performance Table
+  const tbody5 = document.querySelector('#table5Perf tbody');
+  tbody5.innerHTML = perf5.length ? perf5.map(r => `
+    <tr>
+      <td class="mono">${esc(r.batchLabel)}</td>
+      <td><div class="flex-row">${r.predictedNumbers.map(n=>ballHtml(n,'sm')).join('')}</div></td>
+      <td>${r.uniqueNumbers.slice(0,6).map(u=>`<span style="font-size:.7rem;margin-right:4px">${u.num}(${u.count}x)</span>`).join('')}</td>
+      <td style="text-align:center;font-weight:700;color:${r.totalHits>0?'var(--green)':'var(--text-faint)'}">${r.totalHits}</td>
+    </tr>
+  `).join('') : `<tr><td colspan="4" class="muted">Need more draws to calculate batch metrics.</td></tr>`;
+
+  // Archive Table
+  const tbodyArc = document.querySelector('#tableArchive tbody');
+  tbodyArc.innerHTML = archive.batches.length ? archive.batches.map(b => `
+    <tr>
+      <td class="mono">#${b.batchId}</td>
+      <td class="mono" style="font-size:.7rem;color:var(--text-faint)">${new Date(b.evaluatedAt).toLocaleTimeString()}</td>
+      <td><div class="flex-row">${b.prediction.predictedNumbers.map(n=>ballHtml(n,'sm')).join('')}</div></td>
+      <td class="mono" style="text-align:center">${b.result.numberHits}/${b.result.requiredHits}</td>
+      <td style="text-align:center"><span class="outcome-tag ${b.result.isWin?'win':'loss'}">${b.result.isWin?'✓ WIN':'✗ LOSS'}</span></td>
+      <td class="mono" style="text-align:center;color:var(--green)">${b.prediction.overallConfidence}%</td>
+    </tr>
+  `).join('') : `<tr><td colspan="6" class="muted">No completed batches evaluated yet.</td></tr>`;
+}
+
+// ── Predict Breakdown ────────────────────────────────────────────────────
+// ── TOP 4 LIVE REALITY ENGINE — dashboard card, log, trend view ──────────
+// Entirely independent read of /api/v1/top4-reality*. A failure here must
+// never break the rest of the dashboard, so this is called separately from
+// renderDashboard() and swallows its own errors.
+function conditionMeta(status){
+  return ({
+    HEALTHY:      { dot:'healthy',    ring:'var(--green)', label:'HEALTHY' },
+    NORMAL:       { dot:'normal',     ring:'var(--blue)',  label:'NORMAL' },
+    CAUTION:      { dot:'caution',    ring:'var(--gold)',  label:'CAUTION' },
+    HIT_DROUGHT:  { dot:'drought',    ring:'var(--red)',   label:'⚠ HIT DROUGHT' },
+    RECOVERING:   { dot:'recovering', ring:'var(--gold)',  label:'↗ RECOVERING' },
+    EARLY_DATA:   { dot:'early',      ring:'var(--text-faint)', label:'EARLY DATA' },
+    WATCHING:     { dot:'early',      ring:'var(--text-faint)', label:'WATCHING' },
+    DEVELOPING:   { dot:'normal',     ring:'var(--blue)',  label:'DEVELOPING' }
+  })[status] || { dot:'early', ring:'var(--text-faint)', label: status || '—' };
+}
+
+function trendBarsHtml(tests){
+  // Oldest → newest, last 20 completed tests, bar height by opportunity hit rate.
+  const seq = tests.slice(0, 20).reverse();
+  if (!seq.length) return `<div class="muted">Not enough completed Reality tests yet for a trend view.</div>`;
+  return `<div class="trend-bars">${seq.map(t => {
+    const h = Math.max(6, Math.round((t.opportunityHitRate / 100) * 36));
+    const color = t.opportunityHitRate >= 50 ? 'var(--green)' : t.opportunityHitRate >= 35 ? 'var(--gold)' : 'var(--red)';
+    return `<div class="tb" style="height:${h}px;background:${color}" title="${t.predictionId}: ${t.opportunityHitRate}%"></div>`;
+  }).join('')}</div>`;
+}
+
+async function renderTop4Reality(){
+  try {
+    const [status, hist] = await Promise.all([
+      api('/api/v1/top4-reality'),
+      api('/api/v1/top4-reality/history?limit=20')
+    ]);
+    if (!status || !status.success) throw new Error('no status');
+
+    const cm = conditionMeta(status.condition);
+    const hitRate = status.hitRate ?? 0;
+    const tests = (hist && hist.tests) || [];
+
+    const activeTestHtml = status.activeTest ? `
+      <div style="margin-top:16px">
+        <div class="card-lbl" style="margin-bottom:6px">Active Reality Test — ${esc(status.activeTest.predictionId)}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((status.activeTest.drawsCompleted/status.activeTest.drawsRequired)*100)}%;background:var(--blue)"></div></div>
+        <div class="muted" style="margin-top:6px">${status.activeTest.drawsCompleted} / ${status.activeTest.drawsRequired} draws evaluated · source draw ${esc(String(status.activeTest.sourceDrawId))}</div>
+      </div>
+    ` : `<div class="muted" style="margin-top:16px">No active test yet — the next accepted live draw starts a new Reality audit.</div>`;
+
+    $('realityCardArea').innerHTML = `
+      <div class="card" style="border:1px solid ${cm.ring}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="card-title">🛰️ Top 4 Live Reality</div>
+            <div class="muted">Autonomous 3-draw audit of this exact Top 4 intelligence — backtesting, hit-rate & drought detection.</div>
+          </div>
+          <span class="badge badge-faint">BACKGROUND AUDIT · ACTIVE</span>
+        </div>
+
+        <div class="reality-hero" style="margin-top:14px">
+          <div class="reality-ring" style="--ring-pct:${Math.min(100, hitRate)};--ring-color:${cm.ring}">
+            <div class="rv"><b>${hitRate}%</b><span>Hit Rate</span></div>
+          </div>
+          <div>
+            <div class="reality-cond-row">
+              <span class="reality-dot ${cm.dot}"></span>
+              <b class="display" style="font-size:1rem">${esc(cm.label)}</b>
+            </div>
+            <div class="muted" style="margin-top:4px">
+              Sample: ${status.sample.completedTests} completed test${status.sample.completedTests===1?'':'s'} · ${esc(status.sample.stage)}
+            </div>
+            ${status.drought.active ? `<div class="muted" style="color:var(--red);margin-top:4px">Weak windows in a row: ${status.drought.consecutiveWeakWindows}</div>` : ''}
+            ${status.recovery.active ? `<div class="muted" style="color:var(--gold);margin-top:4px">Improving windows in a row: ${status.recovery.consecutiveImprovingWindows}</div>` : ''}
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric-cell"><div class="ml">Number Coverage</div><div class="mv">${status.numberCoverageRate}%</div></div>
+          <div class="metric-cell"><div class="ml">Draw Window</div><div class="mv">${status.windowCoverageRate}%</div></div>
+          <div class="metric-cell"><div class="ml">Last 3</div><div class="mv">${status.rolling.last3 ?? '—'}${status.rolling.last3!=null?'%':''}</div></div>
+          <div class="metric-cell"><div class="ml">Last 5</div><div class="mv">${status.rolling.last5 ?? '—'}${status.rolling.last5!=null?'%':''}</div></div>
+          <div class="metric-cell"><div class="ml">Last 10</div><div class="mv">${status.rolling.last10 ?? '—'}${status.rolling.last10!=null?'%':''}</div></div>
+          <div class="metric-cell"><div class="ml">Baseline</div><div class="mv">${status.baseline.hitRate ?? '—'}${status.baseline.hitRate!=null?'%':''}</div></div>
+        </div>
+
+        ${status.baseline.deviation != null ? `<div class="muted" style="margin-top:10px">Deviation from baseline: <b style="color:${status.baseline.deviation>=0?'var(--green)':'var(--red)'}">${status.baseline.deviation>=0?'+':''}${status.baseline.deviation}pp</b>${status.baseline.established ? '' : ' <span class="badge badge-faint" style="margin-left:4px">not yet established</span>'}</div>` : ''}
+
+        ${activeTestHtml}
+
+        <div class="card-lbl" style="margin-top:16px">Last 20 Reality Tests</div>
+        ${trendBarsHtml(tests)}
+      </div>
+    `;
+
+    // ── Evaluation log (spec §57-58) ──
+    $('realityLogArea').innerHTML = `
+      <div class="card">
+        <div class="card-title">📜 Top 4 Reality Log</div>
+        <div class="muted" style="margin-bottom:12px">Full traceability per completed Reality test — source draw, Top 4, +1/+2/+3 hits, and result.</div>
+        ${tests.length ? tests.slice(0, 10).map(t => `
+          <div class="reality-log-entry">
+            <div class="reality-log-head">
+              <div>
+                <b class="mono">${esc(t.predictionId)}</b>
+                <span class="muted"> · source ${esc(String(t.sourceDrawId))}</span>
+              </div>
+              <span class="badge ${conditionMeta(t.condition).dot === 'healthy' ? 'badge-green' : conditionMeta(t.condition).dot === 'drought' ? 'badge-red' : conditionMeta(t.condition).dot === 'caution' || conditionMeta(t.condition).dot === 'recovering' ? 'badge-gold' : 'badge-faint'}">${esc(conditionMeta(t.condition).label)}</span>
+            </div>
+            <div class="flex-row">${t.top4.map(n => ballHtml(n, 'sm')).join('')}</div>
+            <div class="reality-offsets">
+              ${t.evaluations.map(ev => `
+                <span class="reality-offset ${ev.hitCount>0?'hit':'miss'}">+${ev.offset}: ${ev.hits.length ? ev.hits.join(', ') : '—'}</span>
+              `).join('')}
+            </div>
+            <div class="muted mono" style="font-size:.74rem">
+              Coverage ${t.numberCoverage}% · Window ${t.windowCoverage}% · Hit Rate ${t.opportunityHitRate}%
+            </div>
+          </div>
+        `).join('') : `<div class="muted">No completed Reality tests yet — the first live audit begins once enough draws exist for a Top 4 prediction.</div>`}
+      </div>
+    `;
+  } catch (e) {
+    // Never let a Reality Engine hiccup take down the rest of the dashboard.
+    $('realityCardArea').innerHTML = `<div class="card muted">Top 4 Live Reality unavailable right now.</div>`;
+  }
+}
+
+async function renderPredictBreakdown(){
+  const pred = await api('/api/number/predict?size=4');
+  if (!pred.numberDetails) {
+    $('predictBreakdown').innerHTML = `<div class="muted">${esc(pred.error || 'Not enough draws yet.')}</div>`;
+    return;
+  }
+  $('predictBreakdown').innerHTML = pred.numberDetails.map((c, i) => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border-soft)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="display:flex;align-items:center;gap:8px">${ballHtml(c.num,'sm')} <b>Rank #${i+1}</b></span>
+        <span class="mono" style="color:var(--green);font-weight:700">${c.individualConfidence}% Confidence</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px">
+        ${Object.entries(c.layers).map(([k,v]) => `
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--text-faint)">
+              <span style="text-transform:uppercase">${esc(k)}</span>
+              <span class="mono">${v}%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" style="width:${v}%;background:${k==='scie'?'var(--purple)':'var(--blue)'}"></div></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Draw Management ──────────────────────────────────────────────────────
+async function renderDrawHistory(){
+  const data = await api('/api/draws?limit=15');
+  // FIX: d.drawId and d.source come from user-supplied ingest payloads and
+  // are echoed back verbatim by the API. Escape them before interpolating
+  // into innerHTML -- previously they were inserted raw, allowing a
+  // malicious ingest payload (e.g. source: "<img src=x onerror=...>") to
+  // execute as script when this tab renders (stored XSS).
+  $('drawsList').innerHTML = data.draws.map(d => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--border-soft);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div class="mono" style="font-size:.72rem;color:var(--text-faint)">${esc(d.drawId)} · ${new Date(d.timestamp).toLocaleString()} · ${esc(d.source)}</div>
+      <div class="flex-row">${d.numbers.map(n=>ballHtml(n,'sm')).join('')}</div>
+    </div>
+  `).join('');
+}
+
+// ── Intelligence Report ──────────────────────────────────────────────────
+// ── v19 — Pattern Climate Engine + Opportunity Window Engine ─────────────
+function renderClimateOpportunity(pred){
+  const c = pred.climate;
+  const o = pred.opportunity;
+  if (!c || c.state === 'INSUFFICIENT_DATA') {
+    $('v19ClimateArea').innerHTML = `
+      <div class="card">
+        <div class="card-title">🌦️ Pattern Climate & Opportunity Window</div>
+        <div class="muted">Not enough draw history yet to characterize the current pattern climate.</div>
+      </div>`;
+    return;
+  }
+
+  $('v19ClimateArea').innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="card-title">🌦️ Pattern Climate Engine</div>
+          <div class="muted">${esc(c.summary)}</div>
+        </div>
+        <span class="badge ${levelBadgeClass(c.state)}">${esc(c.state)}</span>
+      </div>
+      <div class="tile-grid">
+        <div class="tile"><div class="tl">Pattern Strength</div><div class="tv" style="color:var(--purple)">${c.patternStrength}%</div></div>
+        <div class="tile"><div class="tl">Transition Phase</div><div class="tv">${esc(c.transitionPhase)}</div></div>
+        <div class="tile"><div class="tl">Frequency Dominance</div><div class="tv">${esc(c.frequencyDominance.label)}</div><div class="ts">${c.frequencyDominance.leadingNumbers.length} leading number(s)</div></div>
+        <div class="tile"><div class="tl">Momentum</div><div class="tv">${esc(c.momentumDominance.direction)}</div></div>
+        <div class="tile"><div class="tl">Repeat Activity</div><div class="tv">${esc(c.repeatActivity.label)}</div><div class="ts">${c.repeatActivity.rate}% rate</div></div>
+        <div class="tile"><div class="tl">Companion Groups</div><div class="tv">${esc(c.companionGroupActivity.label)}</div><div class="ts">${c.companionGroupActivity.density}% density</div></div>
+      </div>
+      ${c.frequencyDominance.leadingNumbers.length ? `
+        <div class="card-lbl" style="margin-top:10px">Currently Leading Numbers</div>
+        <div class="flex-row">${c.frequencyDominance.leadingNumbers.map(n=>ballHtml(n,'sm')).join('')}</div>
+      ` : ''}
+    </div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div class="card-title">🎯 Opportunity Window</div>
+        <span class="badge ${levelBadgeClass(o.level)}">${esc(o.level)} · ${esc(o.recommendation.replace(/_/g,' '))}</span>
+      </div>
+      <div class="tile-grid">
+        <div class="tile"><div class="tl">Opportunity Score</div><div class="tv" style="color:var(--blue)">${o.score}%</div></div>
+        <div class="tile"><div class="tl">Pattern Strength</div><div class="tv">${o.components.patternStrength}%</div></div>
+        <div class="tile"><div class="tl">Ensemble Independence</div><div class="tv">${o.components.effectiveIndependenceScore}%</div></div>
+        <div class="tile"><div class="tl">Group Confidence</div><div class="tv">${o.components.groupConfidenceScore}%</div></div>
+      </div>
+      <div class="card-lbl" style="margin-top:10px">Why</div>
+      ${o.reasons.map(r=>`<div class="muted" style="margin-bottom:4px">• ${esc(r)}</div>`).join('')}
+    </div>
+  `;
+}
+
+// ── v19 — Group Intelligence Engine ───────────────────────────────────────
+function groupCardHtml(g, statusClass){
+  return `
+    <div class="scie-signal-card">
+      <div class="flex-row">${g.members.map(n=>ballHtml(n,'sm')).join('')}</div>
+      <div class="mono" style="font-size:.8rem;color:var(--text-dim)">${g.totalObserved}× observed · ${g.strengthRatio}× baseline rate</div>
+      <div class="mono" style="font-weight:700;color:var(--purple)">Confidence: ${g.confidence}%</div>
+      <span class="badge ${statusClass}">${esc(g.status)}</span>
+    </div>
+  `;
+}
+
+function renderGroupIntelligence(pred){
+  const g = pred.groupIntelligence;
+  if (!g) { $('v19GroupIntelArea').innerHTML = ''; return; }
+  $('v19GroupIntelArea').innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="card-title">🧩 Group Intelligence Engine</div>
+          <div class="muted">Discovers, tracks, and scores number groups that frequently move together — distinct from SCIE's directed trigger→target signals.</div>
+        </div>
+        <span class="badge ${levelBadgeClass(g.groupConfidence)}">Confidence: ${esc(g.groupConfidence)}</span>
+      </div>
+      <div class="tile-grid">
+        <div class="tile"><div class="tl">Groups Tracked</div><div class="tv">${g.totalGroupsTracked}</div></div>
+        <div class="tile"><div class="tl">Active</div><div class="tv" style="color:var(--green)">${g.activeGroups.length}</div></div>
+        <div class="tile"><div class="tl">Emerging</div><div class="tv" style="color:var(--gold)">${g.emergingGroups.length}</div></div>
+        <div class="tile"><div class="tl">Retired</div><div class="tv" style="color:var(--text-faint)">${g.retiredGroups.length}</div></div>
+      </div>
+
+      <div class="card-lbl" style="margin-top:14px">Active Groups</div>
+      ${g.activeGroups.length ? g.activeGroups.map(x=>groupCardHtml(x,'badge-green')).join('') : `<div class="muted">No active groups currently.</div>`}
+
+      <div class="card-lbl" style="margin-top:14px">Emerging Groups</div>
+      ${g.emergingGroups.length ? g.emergingGroups.map(x=>groupCardHtml(x,'badge-gold')).join('') : `<div class="muted">No newly emerging groups.</div>`}
+
+      <div class="card-lbl" style="margin-top:14px">Recently Retired</div>
+      ${g.retiredGroups.length ? g.retiredGroups.map(x=>groupCardHtml(x,'badge-faint')).join('') : `<div class="muted">No groups have cooled off recently.</div>`}
+    </div>
+  `;
+}
+
+// ── v19 — Explainability Engine ───────────────────────────────────────────
+function renderExplainability(pred){
+  const ex = pred.explanation;
+  if (!ex) { $('v19ExplainArea').innerHTML = ''; return; }
+  $('v19ExplainArea').innerHTML = `
+    <div class="card">
+      <div class="card-title">🔍 Explainability Engine</div>
+      <div class="muted" style="margin-bottom:12px">${esc(ex.overallSummary)}</div>
+      ${(ex.perNumber||[]).map(p => `
+        <div class="scie-signal-card" style="align-items:flex-start">
+          ${ballHtml(p.num)}
+          <div style="flex:1;min-width:220px">
+            <div class="mono" style="font-weight:700;color:var(--green);margin-bottom:4px">${p.confidence}% confidence · pattern: ${esc(p.dominantPattern)}</div>
+            <div class="muted" style="margin-bottom:6px">${esc(p.decisionSummary)}</div>
+            <div class="flex-row">
+              ${p.contributingLayers.map(c=>`<span class="badge badge-purple">${esc(c.label)} ${c.score}% (${c.weightPct}% wt)</span>`).join('')}
+            </div>
+            ${p.strongestSupportingSignals.length ? `<div class="muted" style="margin-top:6px;font-size:.72rem">${p.strongestSupportingSignals.map(s=>esc(s)).join(' · ')}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ── v19 — Enhanced Engine Health Monitor ──────────────────────────────────
+async function renderHealthMonitor(){
+  const h = await api('/api/number/health');
+
+  const accRows = (h.accuracyByLayer||[]).map(a => `
+    <tr>
+      <td class="mono" style="text-transform:uppercase;font-size:.72rem;font-weight:700">${esc(a.layer)}</td>
+      <td class="mono">${a.winRate != null ? a.winRate + '%' : '—'}</td>
+      <td class="mono">${a.sample}</td>
+      <td class="mono">${a.brier != null ? a.brier.toFixed(3) : '—'}</td>
+      <td class="mono" style="color:var(--green)">${a.weight != null ? Math.round(a.weight*100)+'%' : '—'}</td>
+    </tr>
+  `).join('');
+
+  const trendRows = (h.layerReliabilityTrend||[]).map(t => `
+    <tr>
+      <td class="mono" style="text-transform:uppercase;font-size:.72rem;font-weight:700">${esc(t.layer)}</td>
+      <td><span class="badge ${levelBadgeClass(t.trend)}">${esc(t.trend)}</span></td>
+      <td class="mono">${t.deltaBrier != null ? t.deltaBrier : '—'}</td>
+    </tr>
+  `).join('');
+
+  $('v19HealthArea').innerHTML = `
+    <div class="card" style="border:1px solid var(--blue-glow)">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="card-title">💓 Enhanced Engine Health Monitor</div>
+          <div class="muted">Accuracy by layer, reliability trend, confidence trend, prediction consistency, and learning progress.</div>
+        </div>
+        <span class="badge ${levelBadgeClass(h.status)}">${esc(h.status)}</span>
+      </div>
+
+      <div class="tile-grid">
+        <div class="tile"><div class="tl">Confidence Trend</div><div class="tv">${esc(h.confidenceTrend.trend)}</div><div class="ts">${h.confidenceTrend.recentAvg != null ? h.confidenceTrend.recentAvg+'% recent vs '+h.confidenceTrend.olderAvg+'% prior' : 'Not enough batches yet'}</div></div>
+        <div class="tile"><div class="tl">Prediction Consistency</div><div class="tv">${esc(h.predictionConsistency.label)}</div><div class="ts">${h.predictionConsistency.consistencyScore != null ? h.predictionConsistency.consistencyScore+'% overlap' : '—'}</div></div>
+        <div class="tile"><div class="tl">Learning Stage</div><div class="tv">${esc(h.learningProgress.stage)}</div><div class="ts">${h.learningProgress.batchesScored} batches scored</div></div>
+        <div class="tile"><div class="tl">Weight Drift</div><div class="tv">${h.learningProgress.weightDriftFromDefault}%</div><div class="ts">vs. default split</div></div>
+      </div>
+
+      <div class="card-lbl" style="margin-top:14px">Accuracy By Layer</div>
+      <div style="overflow-x:auto;margin-bottom:14px">
+        <table class="tx-perf-table">
+          <thead><tr><th>Layer</th><th>Win Rate</th><th>Sample</th><th>Brier</th><th>Weight</th></tr></thead>
+          <tbody>${accRows || `<tr><td colspan="5" class="muted">No data yet.</td></tr>`}</tbody>
+        </table>
+      </div>
+
+      <div class="card-lbl">Layer Reliability Trend</div>
+      <div style="overflow-x:auto">
+        <table class="tx-perf-table">
+          <thead><tr><th>Layer</th><th>Trend</th><th>Δ Brier</th></tr></thead>
+          <tbody>${trendRows || `<tr><td colspan="3" class="muted">No data yet.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+async function renderIntelligenceReport(){
+  const [report, pred] = await Promise.all([
+    api('/api/intelligence/report'),
+    api('/api/number/predict?size=4')
+  ]);
+  $('intelligenceReportArea').innerHTML = `
+    <div class="card">
+      <div class="card-title">Executive Performance Report</div>
+      <div class="tile-grid" style="margin-top:10px">
+        <div class="tile"><div class="tl">Win Rate</div><div class="tv" style="color:var(--green)">${report.executive.overallWinRate}%</div></div>
+        <div class="tile"><div class="tl">Wins</div><div class="tv">${report.executive.wins}</div></div>
+        <div class="tile"><div class="tl">Losses</div><div class="tv" style="color:var(--red)">${report.executive.losses}</div></div>
+      </div>
+    </div>
+  `;
+
+  if (pred && pred.climate) {
+    renderClimateOpportunity(pred);
+    renderGroupIntelligence(pred);
+    renderExplainability(pred);
+  } else {
+    $('v19ClimateArea').innerHTML = `<div class="card"><div class="muted">${esc((pred && pred.error) || 'Not enough draws yet for the v19 intelligence modules.')}</div></div>`;
+    $('v19GroupIntelArea').innerHTML = '';
+    $('v19ExplainArea').innerHTML = '';
+  }
+  await renderHealthMonitor();
+}
+
+// ── Global Refresh Dispatcher ────────────────────────────────────────────
+function refreshUI(){
+  updateStatus();
+  if (activeTab === 'dashboard') { renderDashboard(); renderTop4Reality(); }
+  else if (activeTab === 'predict') renderPredictBreakdown();
+  else if (activeTab === 'history') renderDrawHistory();
+  else if (activeTab === 'performance') renderIntelligenceReport();
+}
+
+// ── Button Handlers ──────────────────────────────────────────────────────
+$('btnConsolidated').addEventListener('click', async () => {
+  const btn = $('btnConsolidated');
+  btn.disabled = true; btn.textContent = 'Analyzing Engine v20…';
+  try {
+    const data = await api('/api/predict/live/all');
+    if (data.number && data.number.predictedNumbers) {
+      const drawLabel = data.number.sourceDrawIdIsSynthetic
+        ? `internal ref ${esc(data.number.sourceDrawId)} (no Bet9ja draw ID on file for this draw)`
+        : `draw ${esc(data.number.sourceDrawId)}`;
+      const tradeLine = `Trade ${data.number.predictedNumbers.join(',')} based on ${drawLabel}`;
+      const cc = data.number.consensusCalibration;
+      const temperNote = (cc && cc.applied)
+        ? `<div class="mono" style="margin-top:6px;font-size:.72rem;color:var(--gold)">⚠ Confidence tempered ${cc.rawConfidence}% → ${data.number.overallConfidence}% — ${esc(cc.reason)}</div>`
+        : '';
+      $('consolidatedResult').innerHTML = `
+        <div class="card" style="border:1px solid var(--green-glow)">
+          <div class="card-title">Consolidated Live Top 4 Prediction</div>
+          <div class="mono" style="margin-top:4px;font-size:.85rem;color:var(--text)">${tradeLine}</div>
+          <div class="mono" style="margin-top:4px;font-size:.8rem;color:var(--green)">Confidence: ${data.number.overallConfidence}%</div>
+          ${temperNote}
+          <div class="flex-row" style="margin-top:10px;justify-content:center">
+            ${data.number.predictedNumbers.map(n=>ballHtml(n,'lg')).join('')}
+          </div>
+        </div>
+      `;
+    } else {
+      $('consolidatedResult').innerHTML = `<div class="card muted">${esc((data.number && data.number.error) || 'Prediction unavailable — need more draws.')}</div>`;
+    }
+  } catch (e) {
+    $('consolidatedResult').innerHTML = `<div class="card muted">Engine request failed. Try again.</div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '⚡ Run Engine v20';
+  }
+});
+
+
+$('btnPaste').addEventListener('click', async () => {
+  const errEl = $('pasteErr');
+  errEl.style.display = 'none';
+  const lines = $('pasteBox').value.trim().split('\n').filter(Boolean);
+  if (!lines.length) {
+    errEl.textContent = 'Paste at least one draw line before ingesting.';
+    errEl.style.display = 'block';
+    return;
+  }
+  const draws = lines.map(l => ({ numbers: l.split(/[\s,;|]+/).map(Number) }));
+  try {
+    const res = await api('/api/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ draws, source: 'manual_ingest' })
+    });
+    if (res.error) {
+      errEl.textContent = res.error;
+      errEl.style.display = 'block';
+      return;
+    }
+    if (res.skipped > 0 && res.added === 0) {
+      errEl.textContent = `All ${res.skipped} line(s) were skipped (invalid format or duplicate draw).`;
+      errEl.style.display = 'block';
+    }
+    $('pasteBox').value = '';
+    refreshUI();
+  } catch (e) {
+    errEl.textContent = 'Ingest request failed. Check the gateway connection.';
+    errEl.style.display = 'block';
+  }
+});
+
+$('btnClear').addEventListener('click', async () => {
+  if (confirm('Wipe all draws and batch metrics?')) {
+    await api('/api/clear', { method: 'POST' });
+    refreshUI();
+  }
+});
+
+// ── Auto-Refresh Timer (Every 25 seconds) ─────────────────────────────────
+setInterval(() => {
+  timerSeconds--;
+  if (timerSeconds <= 0) {
+    timerSeconds = 25;
+    refreshUI();
+  }
+  $('refreshTimer').textContent = timerSeconds + 's';
+}, 1000);
+
+// Boot
+refreshUI();
+</script>
+</body>
+</html>
